@@ -635,10 +635,20 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                   <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
                   Register New Student
                 </h3>
-                <form onSubmit={handleAddStudent} className="grid grid-cols-1 md:grid-cols-6 gap-5 items-end relative z-10">
+                <form onSubmit={handleAddStudent} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-end relative z-10">
                   <div className="flex flex-col">
                     <label className="text-[9px] font-bold uppercase tracking-[0.2em] mb-2 text-indigo-300/70">Student Number</label>
                     <input type="text" placeholder="UA202300370" required value={newStudent.student_number} onChange={(e) => setNewStudent({...newStudent, student_number: e.target.value})}
+                      className="px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-indigo-500/30 text-indigo-50 placeholder-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none transition-all duration-300" />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-[9px] font-bold uppercase tracking-[0.2em] mb-2 text-indigo-300/70">Student Name</label>
+                    <input type="text" placeholder="Juan Dela Cruz" required value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})}
+                      className="px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-indigo-500/30 text-indigo-50 placeholder-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none transition-all duration-300" />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-[9px] font-bold uppercase tracking-[0.2em] mb-2 text-indigo-300/70">Email Account</label>
+                    <input type="email" placeholder="student@icct.edu.ph" required value={newStudent.email} onChange={(e) => setNewStudent({...newStudent, email: e.target.value})}
                       className="px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-indigo-500/30 text-indigo-50 placeholder-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none transition-all duration-300" />
                   </div>
                   <div className="flex flex-col">
@@ -655,13 +665,8 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                       {classes.map(c => <option key={c.id} value={c.section}>{c.section}</option>)}
                     </select>
                   </div>
-                  <div className="flex flex-col md:col-span-2">
-                    <label className="text-[9px] font-bold uppercase tracking-[0.2em] mb-2 text-indigo-300/70">Student Name</label>
-                    <input type="text" placeholder="Juan Dela Cruz" required value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})}
-                      className="px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-indigo-500/30 text-indigo-50 placeholder-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none transition-all duration-300" />
-                  </div>
-                  <button type="submit" className="px-6 py-3 h-[42px] bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-400/50 font-bold text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] whitespace-nowrap">
-                    ADD
+                  <button type="submit" className="w-full px-6 py-3 h-[42px] bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-400/50 font-bold text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] whitespace-nowrap">
+                    ADD STUDENT
                   </button>
                 </form>
               </div>
