@@ -197,7 +197,7 @@ export default function StudentRegister({ onBackToLogin }) {
                 <input type="email" name="email" placeholder="Email" required value={formData.email} onChange={handleChange} 
                   className="w-full px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-cyan-500/30 text-cyan-50 placeholder-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300 hover:bg-slate-900/80" />
                 <input type="password" name="password" placeholder="Password" required value={formData.password} onChange={handleChange} 
-                  className="w-full px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-cyan-500/30 text-cyan-50 placeholder-slate-600 focus:border-cyan-40  focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-3₀₀ hover:bg-slate-9₀₀/8₀" />
+                  className="w-full px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-cyan-500/30 text-cyan-50 placeholder-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300 hover:bg-slate-900/80" />
                 <input type="password" name="confirm_password" placeholder="Confirm Password" required value={formData.confirm_password} onChange={handleChange} 
                   className="w-full px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-cyan-500/30 text-cyan-50 placeholder-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300 hover:bg-slate-900/80" />
               </div>
