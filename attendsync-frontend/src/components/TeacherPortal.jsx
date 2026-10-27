@@ -385,13 +385,6 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                 <input type="text" placeholder="e.g. Data Structures" required value={newClassForm.name} onChange={e => setNewClassForm({...newClassForm, name: e.target.value})}
                   className="w-full px-4 py-3 text-sm rounded-lg bg-slate-900/50 border border-cyan-500/30 text-cyan-50 placeholder-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300" />
               </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest mb-1.5 block text-cyan-500/70">Section Code</label>
-                <select required value={newClassForm.section_code} onChange={e => setNewClassForm({...newClassForm, section_code: e.target.value})}
-                  className="w-full px-4 py-3 text-sm rounded-lg bg-slate-900/50 border border-cyan-500/30 text-cyan-50 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300 [&>option]:bg-slate-900">
-                  {ALLOWED_SECTIONS.map(sec => <option key={sec} value={sec}>{sec}</option>)}
-                </select>
-              </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowClassModal(false)} className="flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-widest bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-colors duration-300">Abort</button>
                 <button type="submit" className="flex-1 py-3 bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-300 border border-cyan-400/50 rounded-lg text-xs font-bold uppercase tracking-widest transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]">Deploy Protocol</button>
