@@ -88,7 +88,6 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
     fetchRosterAndLogs();
   }, [currentSectionCode, dateFilter]);
 
-  // Bulletproof vault fetch with error catching to prevent white screens
   useEffect(() => {
     if (activeTab === 'attendance' && recordTab === 'overall' && currentSectionCode) {
       const fetchVault = async () => {
@@ -285,7 +284,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
             let isOverall = false;
             try {
               parsed = JSON.parse(decodedText);
-              if (parsed.type === 'Overall Compilation' || parsed.scores) isOverall = true;
+              if (parsed.type === 'Overall Compilation' || parsed.scores || parsed.grading_period) isOverall = true;
             } catch(e){}
 
             if (isOverall) {
@@ -293,16 +292,15 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({
-                   student_id: parsed.student_id,
+                   student_id: parsed.student_id || parsed.studentId,
                    section_code: currentSectionCode, 
-                   grading_period: parsed.grading_period,
+                   grading_period: parsed.grading_period || 'Prelim (4)',
                    scores_data: typeof parsed.data === 'string' ? parsed.data : JSON.stringify(parsed.data || parsed)
                  })
                });
                
                if (res.ok) {
-                 toast.success(`Vault Compiled: ${parsed.student_id}`, { style: { background: '#022c22', color: '#34d399', border: '1px solid #059669' } });
-                 // Refresh overall grades list if currently viewing master vault
+                 toast.success(`Vault Compiled: ${parsed.student_id || parsed.studentId}`, { style: { background: '#022c22', color: '#34d399', border: '1px solid #059669' } });
                  const vaultRes = await fetch(`https://attendsync-6dn6.onrender.com/api/grades/${currentSectionCode}`);
                  if (vaultRes.ok) {
                    const vaultData = await vaultRes.json();
@@ -313,14 +311,14 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                  toast.error(`Auth Failed: ${err.detail || 'Transmission Rejected'}`);
                }
             } else {
-               const res = await fetch(`https://attendsync-6dnches.onrender.com/api/scan`, { 
+               const res = await fetch(`https://attendsync-6dn6.onrender.com/api/scan`, { 
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({ qr_token: decodedText, section_code: currentSectionCode })
                });
                const data = await res.json();
                if (!res.ok) {
-                 toast.error(`Auth Failed: ${data.detail}`);
+                 toast.error(`Auth Failed: ${data.detail || 'Scan Rejected'}`);
                }
             }
           } catch (e) { toast.error("Uplink Error during processing."); }
