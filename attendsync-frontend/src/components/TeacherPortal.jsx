@@ -88,12 +88,23 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
     fetchRosterAndLogs();
   }, [currentSectionCode, dateFilter]);
 
+  // Bulletproof vault fetch with error catching to prevent white screens
   useEffect(() => {
     if (activeTab === 'attendance' && recordTab === 'overall' && currentSectionCode) {
-      fetch(`https://attendsync-6dn6.onrender.com/api/grades/${currentSectionCode}`)
-        .then(res => res.json())
-        .then(data => setOverallGrades(data))
-        .catch(() => toast.error("Failed to load overall gradebook storage."));
+      const fetchVault = async () => {
+        try {
+          const res = await fetch(`https://attendsync-6dn6.onrender.com/api/grades/${currentSectionCode}`);
+          if (res.ok) {
+            const data = await res.json();
+            setOverallGrades(Array.isArray(data) ? data : []);
+          } else {
+            setOverallGrades([]);
+          }
+        } catch (err) {
+          setOverallGrades([]);
+        }
+      };
+      fetchVault();
     }
   }, [activeTab, recordTab, currentSectionCode]);
 
@@ -387,17 +398,24 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
           <div className="glass-panel w-full max-w-xl rounded-2xl overflow-hidden flex flex-col border-indigo-500/50 shadow-[0_0_30px_rgba(99,102,241,0.2)] text-indigo-50">
             <div className="p-5 border-b border-indigo-500/20 flex justify-between items-center bg-indigo-950/30">
               <h2 className="text-lg font-bold tracking-widest uppercase text-indigo-300">
-                {selectedGradeRecord.name} <span className="text-indigo-500/50 mx-2">|</span> {selectedGradeRecord.grading_period}
+                {selectedGradeRecord.name || 'Student Record'} <span className="text-indigo-500/50 mx-2">|</span> {selectedGradeRecord.grading_period || 'Period'}
               </h2>
               <button onClick={() => setSelectedGradeRecord(null)} className="p-2 font-bold text-rose-500 hover:text-rose-400 hover:drop-shadow-[0_0_8px_rgba(244,63,94,0.8)] transition-all duration-300">CLOSE</button>
             </div>
             <div className="p-6">
               {(() => {
                 try {
-                  const data = JSON.parse(selectedGradeRecord.scores_data || "{}");
+                  let data = {};
+                  if (typeof selectedGradeRecord.scores_data === 'string') {
+                    data = JSON.parse(selectedGradeRecord.scores_data);
+                  } else if (selectedGradeRecord.scores_data) {
+                    data = selectedGradeRecord.scores_data;
+                  }
+                  
                   const scores = data.scores || {};
                   const attendance = data.attendance || {};
-                  const cols = selectedGradeRecord.grading_period === 'Finals' ? [1,2] : [1,2,3,4];
+                  const cols = selectedGradeRecord.grading_period === 'Finals' ? [1, 2] : [1, 2, 3, 4];
+
                   return (
                     <table className="w-full text-center border-collapse">
                       <thead>
@@ -410,13 +428,16 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                         {['quiz', 'recitation', 'project'].map(crit => (
                           <tr key={crit}>
                             <td className="p-3 font-medium text-left uppercase tracking-wider text-indigo-200 text-[10px] md:text-xs">{crit}</td>
-                            {cols.map(c => (
-                              <td key={c}>
-                                <div className="w-10 md:w-12 h-9 mx-auto flex items-center justify-center font-mono font-bold rounded bg-indigo-950/50 border border-indigo-500/20 text-indigo-300 transition-all duration-300 hover:bg-indigo-900/50">
-                                  {scores[crit]?.[c] || scores[crit]?.[String(c)] || '-'}
-                                </div>
-                              </td>
-                            ))}
+                            {cols.map(c => {
+                              const val = scores[crit]?.[c] ?? scores[crit]?.[String(c)] ?? '-';
+                              return (
+                                <td key={c}>
+                                  <div className="w-10 md:w-12 h-9 mx-auto flex items-center justify-center font-mono font-bold rounded bg-indigo-950/50 border border-indigo-500/20 text-indigo-300 transition-all duration-300 hover:bg-indigo-900/50">
+                                    {val}
+                                  </div>
+                                </td>
+                              );
+                            })}
                           </tr>
                         ))}
                         <tr className="bg-indigo-500/10">
@@ -433,8 +454,13 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                       </tbody>
                     </table>
                   );
-                } catch (err) {
-                  return <p className="text-rose-400 text-xs font-mono uppercase tracking-widest text-center py-6">Error parsing matrix payload.</p>;
+                } catch (parseErr) {
+                  return (
+                    <div className="py-8 text-center">
+                      <p className="text-rose-400 text-xs font-mono uppercase tracking-widest mb-2">Error rendering matrix data.</p>
+                      <p className="text-slate-500 text-[10px] font-mono">Raw Payload: {String(selectedGradeRecord.scores_data)}</p>
+                    </div>
+                  );
                 }
               })()}
             </div>
