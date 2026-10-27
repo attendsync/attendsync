@@ -2,12 +2,10 @@ import csv
 import io
 import os
 import random
-import smtplib
 import json
 import re  
 from dotenv import load_dotenv
 load_dotenv()
-from email.message import EmailMessage
 from datetime import date, datetime, timedelta 
 from typing import List, Dict, Optional
 from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect, HTTPException, status
@@ -235,7 +233,7 @@ async def remove_student(student_number: str, db: Session = Depends(get_db)):
     db.commit()
     return {"msg": "Student removed successfully"}
 
-# 7. Request Email Verification
+# 7. Request Verification (Cloud Free-Tier Bypassed)
 @app.post("/api/students/request-verification")
 async def request_verification(student: StudentRegister, db: Session = Depends(get_db)):
     existing_student = db.query(models.Student).filter(models.Student.student_number == student.student_number).first()
@@ -245,41 +243,18 @@ async def request_verification(student: StudentRegister, db: Session = Depends(g
     if existing_student.password:
         raise HTTPException(status_code=400, detail="This Student ID is already registered. Please log in.")
 
-    verification_code = str(random.randint(100000, 999999))
+    # Assign a universal bypass code for smooth cloud operations
+    verification_code = "123456"
     pending_verifications[student.email] = verification_code
 
-    try:
-        sender_email = os.getenv("EMAIL_SENDER")
-        sender_password = os.getenv("EMAIL_PASSWORD")
-        msg = EmailMessage()
-        msg['Subject'] = 'AttendSync - Email Verification Code'
-        msg['From'] = sender_email
-        msg['To'] = student.email
-        msg.set_content(f"""\
-        <html><body>
-            <h2>Welcome to AttendSync!</h2>
-            <p>Hi {student.first_name},</p>
-            <p>Your verification code is: <strong><span style="font-size: 24px; color: #0a58ca;">{verification_code}</span></strong></p>
-        </body></html>
-        """, subtype='html')
-
-        with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
-            smtp.ehlo()
-            smtp.starttls()
-            smtp.login(sender_email, sender_password)
-            smtp.send_message(msg)
-    except Exception as e:
-        print(f"\n❌ EMAIL ERROR: {e}\n") 
-        raise HTTPException(status_code=500, detail="Failed to send verification email. Check server console.")
-
-    return {"msg": "Verification code sent successfully"}
+    return {"msg": "Verification code generated successfully", "debug_code": verification_code}
 
 # 8. Verify Code and Create Account
 @app.post("/api/students/verify-and-create")
 async def verify_and_create(data: VerifyEmail, db: Session = Depends(get_db)):
     expected_code = pending_verifications.get(data.email)
     if not expected_code or expected_code != data.code:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code. Use '123456'.")
 
     existing_student = db.query(models.Student).filter(models.Student.student_number == data.student_data.student_number).first()
     full_name = f"{data.student_data.first_name} {data.student_data.middle_name} {data.student_data.last_name}".replace("  ", " ").strip()
@@ -291,7 +266,8 @@ async def verify_and_create(data: VerifyEmail, db: Session = Depends(get_db)):
     existing_student.program = data.student_data.program
 
     db.commit()
-    del pending_verifications[data.email]
+    if data.email in pending_verifications:
+        del pending_verifications[data.email]
     
     return {"msg": "Account registered successfully!"}
 
