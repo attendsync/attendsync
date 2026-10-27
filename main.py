@@ -136,7 +136,7 @@ async def websocket_endpoint(websocket: WebSocket, section_code: str):
 
 # --- REST ENDPOINTS (API) ---
 
-# 1. Login Endpoint with JWT Token Generation
+# 1. Login Endpoint
 @app.post("/api/login")
 async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
     if credentials.role == "student":
@@ -178,12 +178,14 @@ async def get_teacher_classes(teacher_id: str, db: Session = Depends(get_db)):
 @app.post("/api/classes")
 async def create_class(class_data: ClassCreate, db: Session = Depends(get_db)):
     sec_code = class_data.section_code
+    if sec_code:
+        sec_code = sec_code.strip()
     if not sec_code:
         sec_code = "SUBJ_" + "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", k=6))
     
     existing_section = db.query(models.Section).filter(models.Section.section_code == sec_code).first()
     if existing_section:
-        sec_code = "SUBJ_" + "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", k=6))
+        raise HTTPException(status_code=400, detail=f"Subject Code '{sec_code}' already exists.")
 
     new_class = models.Section(
         name=class_data.name,
@@ -201,14 +203,25 @@ async def get_class_roster(section_code: str, db: Session = Depends(get_db)):
     students = db.query(models.Student).filter(models.Student.section_code == section_code).all()
     return students
 
-# 5. Teacher Enrolls a New Student (Auto-creates section if not present to avoid FK errors)
+# 4.5 Fetch Global Roster for Teacher (All their classes)
+@app.get("/api/roster/teacher/{teacher_id}")
+async def get_teacher_roster(teacher_id: str, db: Session = Depends(get_db)):
+    sections = db.query(models.Section.section_code).filter(models.Section.teacher_id == teacher_id).all()
+    section_codes = [s[0] for s in sections]
+    
+    if not section_codes:
+        return []
+        
+    students = db.query(models.Student).filter(models.Student.section_code.in_(section_codes)).all()
+    return students
+
+# 5. Teacher Enrolls a New Student
 @app.post("/api/students")
 async def enroll_student(student_data: StudentCreate, db: Session = Depends(get_db)):
     existing_student = db.query(models.Student).filter(models.Student.student_number == student_data.student_number).first()
     if existing_student:
         raise HTTPException(status_code=400, detail="Student number already registered.")
 
-    # Ensure section exists in sections table to prevent IntegrityError (500)
     existing_section = db.query(models.Section).filter(models.Section.section_code == student_data.section_code).first()
     if not existing_section:
         new_sec = models.Section(
@@ -261,10 +274,9 @@ async def register_student_direct(student: DirectStudentRegister, db: Session = 
     existing_student.program = student.program
 
     db.commit()
-    
     return {"msg": "Account registered successfully!"}
 
-# 8. Process QR Scan (DAILY ATTENDANCE - Day-locked based on student's actual section)
+# 8. Process QR Scan (DAILY ATTENDANCE)
 @app.post("/api/scan")
 async def process_scan(scan_data: ScanRequest, db: Session = Depends(get_db)):
     pht_now = datetime.utcnow() + timedelta(hours=8)
@@ -289,13 +301,8 @@ async def process_scan(scan_data: ScanRequest, db: Session = Depends(get_db)):
     if not student:
         raise HTTPException(status_code=404, detail=f"Student ID '{student_number}' not found.")
 
-    SCHEDULE_MAP = {
-        "LFAU411A031": "Wednesday",
-        "LFAU411A032": "Saturday",
-        "LFAU411A033": "Tuesday",
-        "LFAU411A034": "Friday"
-    }
-
+    # Day lock removed dynamically for teacher sections, handles basic logic.
+    SCHEDULE_MAP = { "LFAU411A031": "Wednesday", "LFAU411A032": "Saturday", "LFAU411A033": "Tuesday", "LFAU411A034": "Friday" }
     if student.section_code in SCHEDULE_MAP:
         expected_day = SCHEDULE_MAP[student.section_code]
         if current_day_name != expected_day:
@@ -331,7 +338,6 @@ async def process_scan(scan_data: ScanRequest, db: Session = Depends(get_db)):
         "time": pht_now.strftime("%I:%M %p")
     }
     await manager.broadcast_scan(scan_data.section_code, live_data)
-    
     return {"msg": "Scan successful", "data": live_data}
 
 # 9. Process Overall Compilation Scan
@@ -374,7 +380,6 @@ async def process_overall_scan(scan_data: OverallScanRequest, db: Session = Depe
         "time": pht_now.strftime("%I:%M %p")
     }
     await manager.broadcast_scan(scan_data.section_code, live_data)
-    
     return {"msg": "Compilation saved successfully", "data": live_data}
 
 # 10. Fetch Overall Compilation Grades

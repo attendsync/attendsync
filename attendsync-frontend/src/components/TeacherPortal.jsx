@@ -10,8 +10,6 @@ const getTodayRaw = () => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-const ALLOWED_SECTIONS = ['LFAU411A031', 'LFAU411A032', 'LFAU411A033', 'LFAU411A034'];
-
 export default function TeacherPortal({ schoolId, teacherName, token, handleLogout }) {
   const teacherId = schoolId || 'TCH-2026';
   const displayName = teacherName || schoolId || 'Dela Cruz';
@@ -27,14 +25,16 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   const html5QrCodeRef = useRef(null);
 
   const [classes, setClasses] = useState([]);
-  const [roster, setRoster] = useState([]);
+  const [classRoster, setClassRoster] = useState([]); // Students purely for active class (Attendance)
+  const [allTeacherStudents, setAllTeacherStudents] = useState([]); // Master roster across ALL classes (Management view)
   const [scannedLogs, setScannedLogs] = useState([]);
   const [overallGrades, setOverallGrades] = useState([]);
 
   const [showClassModal, setShowClassModal] = useState(false);
   const [selectedGradeRecord, setSelectedGradeRecord] = useState(null);
-  const [newClassForm, setNewClassForm] = useState({ name: '', section_code: ALLOWED_SECTIONS[0] });
-  const [newStudent, setNewStudent] = useState({ student_number: '', program: 'BSIT', section_code: ALLOWED_SECTIONS[0], name: '', email: '' });
+  
+  const [newClassForm, setNewClassForm] = useState({ name: '', section_code: '' });
+  const [newStudent, setNewStudent] = useState({ student_number: '', program: 'BSIT', section_code: '', name: '', email: '' });
   
   const [searchQuery, setSearchQuery] = useState('');
   const [sectionFilter, setSectionFilter] = useState('All');
@@ -44,17 +44,31 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   const currentSectionCode = activeSection;
   const activeSubjectName = classes.find(c => c.section === activeSection)?.name || 'Loading...';
 
+  const fetchAllTeacherStudents = async () => {
+    try {
+      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/roster/teacher/${teacherId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAllTeacherStudents(data);
+      }
+    } catch (err) { console.error("Global roster err:", err); }
+  };
+
   const fetchClasses = async () => {
     try {
       const res = await fetch(`https://attendsync-6dn6.onrender.com/api/classes/${teacherId}`);
       const data = await res.json();
       setClasses(data);
-      if (data.length > 0 && !activeSection) {
-        setActiveSection(data[0].section);
-        setNewStudent(prev => ({ ...prev, section_code: data[0].section }));
+      
+      if (data.length > 0) {
+        if (!activeSection) setActiveSection(data[0].section);
+        setNewStudent(prev => ({ ...prev, section_code: prev.section_code || data[0].section }));
       }
+      
+      // Keep master table updated
+      await fetchAllTeacherStudents();
     } catch (err) {
-      toast.error("Failed to load handled classes.", { style: { background: '#0f172a', color: '#38bdf8', border: '1px solid #0369a1' } });
+      toast.error("Failed to load routines.");
     } finally {
       setIsLoading(false);
     }
@@ -66,12 +80,12 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
 
   useEffect(() => {
     if (!currentSectionCode) return;
-    const fetchRosterAndLogs = async () => {
+    const fetchClassRosterAndLogs = async () => {
       setIsLoading(true);
       try {
         const rosterRes = await fetch(`https://attendsync-6dn6.onrender.com/api/roster/${currentSectionCode}`);
         const rosterData = await rosterRes.json();
-        setRoster(rosterData);
+        setClassRoster(rosterData);
 
         const logsRes = await fetch(`https://attendsync-6dn6.onrender.com/api/attendance/${currentSectionCode}?date_filter=${dateFilter}`);
         if (logsRes.ok) {
@@ -80,13 +94,10 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
         } else {
           setScannedLogs([]);
         }
-      } catch (err) { 
-        console.error(err); 
-      } finally { 
-        setTimeout(() => setIsLoading(false), 300); 
-      }
+      } catch (err) { console.error(err); } 
+      finally { setTimeout(() => setIsLoading(false), 300); }
     };
-    fetchRosterAndLogs();
+    fetchClassRosterAndLogs();
   }, [currentSectionCode, dateFilter]);
 
   useEffect(() => {
@@ -97,12 +108,8 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
           if (res.ok) {
             const data = await res.json();
             setOverallGrades(Array.isArray(data) ? data : []);
-          } else {
-            setOverallGrades([]);
-          }
-        } catch (err) {
-          setOverallGrades([]);
-        }
+          } else { setOverallGrades([]); }
+        } catch (err) { setOverallGrades([]); }
       };
       fetchVault();
     }
@@ -188,7 +195,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
 
   const handleAssignClass = async (e) => {
     e.preventDefault();
-    if (!newClassForm.name || !newClassForm.section_code) return;
+    if (!newClassForm.name || !newClassForm.section_code) return toast.error("Please provide Subject Name and Subject Code.");
     try {
       const res = await fetch(`https://attendsync-6dn6.onrender.com/api/classes`, {
         method: 'POST',
@@ -198,7 +205,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
       if (res.ok) {
         await fetchClasses();
         setShowClassModal(false);
-        setNewClassForm({ name: '', section_code: ALLOWED_SECTIONS[0] });
+        setNewClassForm({ name: '', section_code: '' });
         toast.success("New Protocol Assigned!");
       } else {
         const err = await res.json();
@@ -218,14 +225,15 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
       });
       if (res.ok) {
         const addedStudent = await res.json();
-        // Refresh roster so students with any section show up immediately if filtering permits
-        const rosterRes = await fetch(`https://attendsync-6dn6.onrender.com/api/roster/${currentSectionCode}`);
-        if (rosterRes.ok) {
-          const rosterData = await rosterRes.json();
-          setRoster(rosterData);
+        await fetchClasses(); // Refreshes everything and updates the management global table
+        
+        // Refresh local active roster just in case
+        if (currentSectionCode === newStudent.section_code) {
+           const rosterRes = await fetch(`https://attendsync-6dn6.onrender.com/api/roster/${currentSectionCode}`);
+           if (rosterRes.ok) setClassRoster(await rosterRes.json());
         }
-        setClasses(prev => prev.map(c => c.section === currentSectionCode ? { ...c, students: c.students + 1 } : c));
-        setNewStudent({ student_number: '', program: 'BSIT', section_code: ALLOWED_SECTIONS[0], name: '', email: '' });
+
+        setNewStudent({ ...newStudent, student_number: '', name: '', email: '' });
         toast.success(`Identity Registered: ${addedStudent.student.name}`);
       } else {
         const err = await res.json();
@@ -239,14 +247,16 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
     try {
       const res = await fetch(`https://attendsync-6dn6.onrender.com/api/students/${studentNumber}`, { method: 'DELETE' });
       if (res.ok) {
-        setRoster(roster.filter(student => student.student_number !== studentNumber));
+        setClassRoster(classRoster.filter(student => student.student_number !== studentNumber));
+        setAllTeacherStudents(allTeacherStudents.filter(s => s.student_number !== studentNumber));
         setClasses(prev => prev.map(c => c.section === currentSectionCode ? { ...c, students: Math.max(0, c.students - 1) } : c));
         toast.success("Identity Deleted.");
       }
     } catch (err) { toast.error("Delete Failed."); }
   };
 
-  const attendanceList = roster.map(student => {
+  // Maps classRoster (specific to activeSection)
+  const attendanceList = classRoster.map(student => {
     const scanRecord = scannedLogs.find(log => log.studentId === student.student_number && log.rawDate === (dateFilter || getTodayRaw()) && log.type === 'QR Pass');
     return { 
       ...student, 
@@ -264,7 +274,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   });
 
   const presentTodayCount = scannedLogs.filter(log => log.rawDate === getTodayRaw() && log.type === 'QR Pass').length;
-  const currentTotalEnrolled = roster.length;
+  const currentTotalEnrolled = classRoster.length;
 
   const startCamera = async () => {
     setCameraError(null);
@@ -385,6 +395,12 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                 <input type="text" placeholder="e.g. Data Structures" required value={newClassForm.name} onChange={e => setNewClassForm({...newClassForm, name: e.target.value})}
                   className="w-full px-4 py-3 text-sm rounded-lg bg-slate-900/50 border border-cyan-500/30 text-cyan-50 placeholder-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300" />
               </div>
+              {/* FIXED: Replaced dropdown with standard text input */}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest mb-1.5 block text-cyan-500/70">Subject Code / Section</label>
+                <input type="text" placeholder="e.g. LFAU411A031" required value={newClassForm.section_code} onChange={e => setNewClassForm({...newClassForm, section_code: e.target.value})}
+                  className="w-full px-4 py-3 text-sm rounded-lg bg-slate-900/50 border border-cyan-500/30 text-cyan-50 placeholder-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300" />
+              </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowClassModal(false)} className="flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-widest bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-colors duration-300">Abort</button>
                 <button type="submit" className="flex-1 py-3 bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-300 border border-cyan-400/50 rounded-lg text-xs font-bold uppercase tracking-widest transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]">Deploy Protocol</button>
@@ -407,11 +423,8 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
               {(() => {
                 try {
                   let data = {};
-                  if (typeof selectedGradeRecord.scores_data === 'string') {
-                    data = JSON.parse(selectedGradeRecord.scores_data);
-                  } else if (selectedGradeRecord.scores_data) {
-                    data = selectedGradeRecord.scores_data;
-                  }
+                  if (typeof selectedGradeRecord.scores_data === 'string') { data = JSON.parse(selectedGradeRecord.scores_data); } 
+                  else if (selectedGradeRecord.scores_data) { data = selectedGradeRecord.scores_data; }
                   
                   const scores = data.scores || {};
                   const attendance = data.attendance || {};
@@ -433,9 +446,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                               const val = scores[crit]?.[c] ?? scores[crit]?.[String(c)] ?? '-';
                               return (
                                 <td key={c}>
-                                  <div className="w-10 md:w-12 h-9 mx-auto flex items-center justify-center font-mono font-bold rounded bg-indigo-950/50 border border-indigo-500/20 text-indigo-300 transition-all duration-300 hover:bg-indigo-900/50">
-                                    {val}
-                                  </div>
+                                  <div className="w-10 md:w-12 h-9 mx-auto flex items-center justify-center font-mono font-bold rounded bg-indigo-950/50 border border-indigo-500/20 text-indigo-300 transition-all duration-300 hover:bg-indigo-900/50">{val}</div>
                                 </td>
                               );
                             })}
@@ -597,7 +608,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
               </div>
               <div className="flex-1 lg:flex-none px-8 py-5 rounded-2xl glass-panel flex flex-col items-center justify-center min-w-[130px] relative overflow-hidden group">
                 <div className="absolute inset-0 bg-cyan-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-cyan-500/80 mb-2 relative z-10">Total Students</p>
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-cyan-500/80 mb-2 relative z-10">Total Enrolled</p>
                 <p className="text-4xl font-mono font-black text-cyan-100 drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] relative z-10">{currentTotalEnrolled}</p>
               </div>
             </div>
@@ -711,9 +722,11 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                   </div>
                   <div className="flex flex-col">
                     <label className="text-[9px] font-bold uppercase tracking-[0.2em] mb-2 text-indigo-300/70">Section</label>
-                    <select value={newStudent.section_code} onChange={(e) => setNewStudent({...newStudent, section_code: e.target.value})}
+                    {/* FIXED: Dropdown dynamically uses actual existing classes! */}
+                    <select value={newStudent.section_code} onChange={(e) => setNewStudent({...newStudent, section_code: e.target.value})} disabled={classes.length === 0}
                       className="px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-indigo-500/30 text-indigo-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none transition-all duration-300 [&>option]:bg-slate-900">
-                      {ALLOWED_SECTIONS.map(sec => <option key={sec} value={sec}>{sec}</option>)}
+                      {classes.length === 0 && <option value="">Create a Class First</option>}
+                      {classes.map(cls => <option key={cls.section} value={cls.section}>{cls.name} ({cls.section})</option>)}
                     </select>
                   </div>
                   <button type="submit" className="w-full px-6 py-3 h-[42px] bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-400/50 font-bold text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] whitespace-nowrap">
@@ -722,6 +735,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                 </form>
               </div>
 
+              {/* FIXED: The Management roster now displays ALL students from all your classes globally, preventing them from disappearing */}
               <div className="rounded-3xl glass-panel flex flex-col overflow-hidden">
                 <div className="overflow-x-auto flex-1 p-2">
                   <table className="w-full text-left text-sm whitespace-nowrap">
@@ -730,15 +744,15 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                         <th className="px-8 py-5 font-bold text-[9px] text-cyan-500/70 uppercase tracking-[0.2em]">Student</th>
                         <th className="px-8 py-5 font-bold text-[9px] text-cyan-500/70 uppercase tracking-[0.2em]">Program</th>
                         <th className="px-8 py-5 font-bold text-[9px] text-cyan-500/70 uppercase tracking-[0.2em]">Email</th>
-                        <th className="px-8 py-5 font-bold text-[9px] text-cyan-500/70 uppercase tracking-[0.2em]">Section</th>
+                        <th className="px-8 py-5 font-bold text-[9px] text-cyan-500/70 uppercase tracking-[0.2em]">Enrolled Class / Section</th>
                         <th className="px-8 py-5 font-bold text-[9px] text-cyan-500/70 uppercase tracking-[0.2em] text-right">Overrides</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/50">
-                      {roster.length === 0 ? (
+                      {allTeacherStudents.length === 0 ? (
                         <tr><td colSpan="5" className="px-8 py-12 text-center text-[11px] font-mono uppercase tracking-widest text-slate-500">Database Empty.</td></tr>
                       ) : (
-                        roster.map((student) => (
+                        allTeacherStudents.map((student) => (
                           <tr key={student.id} className="hover:bg-cyan-500/5 transition-colors duration-300">
                             <td className="px-8 py-5">
                               <p className="font-bold text-[13px] text-cyan-100 tracking-wide">{student.name}</p>
@@ -748,7 +762,10 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                               <span className="inline-flex items-center px-2.5 py-1 rounded text-[9px] font-bold tracking-[0.2em] uppercase bg-slate-800 border border-slate-700 text-slate-300">{student.program}</span>
                             </td>
                             <td className="px-8 py-5 text-[11px] font-mono text-slate-400">{student.email}</td>
-                            <td className="px-8 py-5 text-[11px] font-mono text-cyan-400">{student.section_code}</td>
+                            <td className="px-8 py-5">
+                               <p className="font-bold text-[12px] text-cyan-300">{classes.find(c => c.section === student.section_code)?.name || student.section_code}</p>
+                               <p className="text-[10px] mt-1 text-slate-500 font-mono">{student.section_code}</p>
+                            </td>
                             <td className="px-8 py-5 text-right">
                               <button onClick={() => handleRemoveStudent(student.student_number)} className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-500 hover:text-rose-400 hover:drop-shadow-[0_0_5px_rgba(244,63,94,0.8)] transition-all duration-300">Delete</button>
                             </td>
@@ -776,7 +793,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                 </div>
 
                 {recordTab === 'daily' ? (
-                  <button onClick={handleExportDailyCSV} className="px-5 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-400/50 text-[9px] font-bold uppercase tracking-[0.2em] rounded-lg transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.2)] flex items-center gap-2">
+                  <button onClick={handleExportDailyCSVImpl} className="px-5 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-400/50 text-[9px] font-bold uppercase tracking-[0.2em] rounded-lg transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.2)] flex items-center gap-2">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> Extract CSV
                   </button>
                 ) : (
@@ -801,11 +818,14 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                       </div>
                       <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}
                         className="w-full md:w-auto px-4 py-2.5 text-xs font-mono rounded-xl bg-slate-900/60 border border-cyan-500/30 text-cyan-400 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300 cursor-pointer" />
+                      
+                      {/* FIXED: Dynamic sections filter replacing hardcoded ALLOWED_SECTIONS */}
                       <select value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}
                         className="w-full md:w-auto px-4 py-2.5 text-xs font-mono rounded-xl bg-slate-900/60 border border-cyan-500/30 text-cyan-400 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300 cursor-pointer [&>option]:bg-slate-900">
                         <option value="All">Sections</option>
-                        {ALLOWED_SECTIONS.map(sec => <option key={sec} value={sec}>{sec}</option>)}
+                        {classes.map(cls => <option key={cls.section} value={cls.section}>{cls.section}</option>)}
                       </select>
+                      
                       <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
                         className="w-full md:w-auto px-4 py-2.5 text-xs font-mono rounded-xl bg-slate-900/60 border border-cyan-500/30 text-cyan-400 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300 cursor-pointer [&>option]:bg-slate-900">
                         <option value="All">All Status</option>
