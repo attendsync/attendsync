@@ -23,6 +23,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [wsStatus, setWsStatus] = useState('connecting...'); 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
   const html5QrCodeRef = useRef(null);
 
   const [classes, setClasses] = useState([]);
@@ -381,16 +382,16 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                     <thead>
                       <tr className="border-b-2 border-indigo-500/30 text-indigo-400 uppercase tracking-widest text-[10px]">
                         <th className="p-2 font-bold text-left">Vector</th>
-                        {cols.map(c => <th key={c} className="p-2 font-bold w-16">Node {c}</th>)}
+                        {cols.map(c => <th key={c} className="p-2 font-bold w-12 md:w-16">N-{c}</th>)}
                       </tr>
                     </thead>
                     <tbody className="text-sm divide-y divide-indigo-500/10">
                       {['quiz', 'recitation', 'project'].map(crit => (
                         <tr key={crit}>
-                          <td className="p-3 font-medium text-left uppercase tracking-wider text-indigo-200 text-xs">{crit}</td>
+                          <td className="p-3 font-medium text-left uppercase tracking-wider text-indigo-200 text-[10px] md:text-xs">{crit}</td>
                           {cols.map(c => (
                             <td key={c}>
-                              <div className="w-12 h-9 mx-auto flex items-center justify-center font-mono font-bold rounded bg-indigo-950/50 border border-indigo-500/20 text-indigo-300 transition-all duration-300 hover:bg-indigo-900/50">
+                              <div className="w-10 md:w-12 h-9 mx-auto flex items-center justify-center font-mono font-bold rounded bg-indigo-950/50 border border-indigo-500/20 text-indigo-300 transition-all duration-300 hover:bg-indigo-900/50">
                                 {data.scores[crit]?.[c] || '-'}
                               </div>
                             </td>
@@ -398,7 +399,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                         </tr>
                       ))}
                       <tr className="bg-indigo-500/10">
-                        <td className="p-3 text-left font-bold uppercase tracking-wider text-cyan-400 text-xs">Uplink (ATT)</td>
+                        <td className="p-3 text-left font-bold uppercase tracking-wider text-cyan-400 text-[10px] md:text-xs">Uplink (ATT)</td>
                         {cols.map(c => (
                           <td key={c}>
                             <div className={`w-3 h-3 mx-auto rounded-full transition-all duration-300 ${data.attendance?.[c] ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-slate-700/50 border border-slate-600'}`}></div>
@@ -414,6 +415,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
         </div>
       )}
 
+      {/* Desktop Sidebar - Hidden on Mobile */}
       <div className="hidden md:flex w-72 flex-col z-10 glass-panel border-y-0 border-l-0 border-r border-cyan-500/20 min-h-screen">
         <div className="p-6 border-b border-cyan-500/20 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl"></div>
@@ -457,6 +459,61 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
         </div>
       </div>
 
+      {/* Mobile Sticky Header */}
+      <div className="md:hidden flex justify-between items-center p-4 border-b border-cyan-500/20 glass-panel z-50 sticky top-0">
+        <div>
+          <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[8px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.2em] mb-1.5 inline-block">Teacher Node</span>
+          <p className="font-bold text-base leading-tight text-cyan-50">Prof. {displayName}</p>
+        </div>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2.5 text-cyan-400 bg-slate-900 border border-cyan-500/30 rounded-lg focus:outline-none shadow-[0_0_10px_rgba(34,211,238,0.2)]">
+          {isMobileMenuOpen ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          )}
+        </button>
+      </div>
+
+      {/* Mobile Menu Dropdown Overlay */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 top-[75px] bg-[#030712]/95 backdrop-blur-xl border-b border-cyan-500/30 z-40 p-6 flex flex-col gap-6 shadow-[0_20px_40px_rgba(0,0,0,0.9)] overflow-y-auto pb-20 animate-in slide-in-from-top-2">
+          
+          {/* Mobile Tabs */}
+          {classes.length > 0 && (
+            <div>
+              <h3 className="text-[9px] font-bold text-cyan-500/70 uppercase tracking-[0.2em] mb-3">Module Control</h3>
+              <div className="grid grid-cols-1 gap-2">
+                <button onClick={() => { setActiveTab('scanner'); setIsMobileMenuOpen(false); }} className={`py-3.5 px-4 text-left rounded-xl text-xs font-bold tracking-widest uppercase transition-all ${activeTab === 'scanner' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-slate-800/50 border border-slate-700 text-slate-300'}`}>QR Scanner</button>
+                <button onClick={() => { setActiveTab('management'); setIsMobileMenuOpen(false); }} className={`py-3.5 px-4 text-left rounded-xl text-xs font-bold tracking-widest uppercase transition-all ${activeTab === 'management' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-slate-800/50 border border-slate-700 text-slate-300'}`}>Add Student</button>
+                <button onClick={() => { setActiveTab('attendance'); setIsMobileMenuOpen(false); }} className={`py-3.5 px-4 text-left rounded-xl text-xs font-bold tracking-widest uppercase transition-all ${activeTab === 'attendance' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-slate-800/50 border border-slate-700 text-slate-300'}`}>Master Logs</button>
+              </div>
+            </div>
+          )}
+
+          {/* Subjects */}
+          <div>
+            <h3 className="text-[9px] font-bold text-cyan-500/70 uppercase tracking-[0.2em] mb-3">Active Subjects</h3>
+            <div className="flex flex-col gap-2">
+              {classes.map(cls => (
+                <button key={cls.id} onClick={() => { handleSubjectChange(cls.section); setIsMobileMenuOpen(false); }} className={`py-3.5 px-4 text-left rounded-xl text-xs font-bold tracking-widest uppercase transition-all relative overflow-hidden ${activeSection === cls.section ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]' : 'bg-slate-800/50 border border-slate-700 text-slate-300'}`}>
+                  {activeSection === cls.section && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-400"></div>}
+                  <div className="flex justify-between items-center">
+                    <span>{cls.name}</span>
+                    <span className="opacity-60 text-[9px]">{cls.section}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => { setShowClassModal(true); setIsMobileMenuOpen(false); }} className="w-full mt-3 py-3.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-[10px] font-bold uppercase tracking-[0.15em] rounded-xl transition-all border border-cyan-500/30 border-dashed">Add Class</button>
+          </div>
+          
+          <button onClick={handleLogout} className="w-full mt-auto py-4 text-xs text-rose-400 bg-rose-500/10 rounded-xl font-bold tracking-widest uppercase border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.15)] flex items-center justify-center">
+            <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg> Terminate Session
+          </button>
+        </div>
+      )}
+
+      {/* Main Content Area */}
       <div className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto w-full relative z-10">
         {isLoading && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center glass-panel">
@@ -468,12 +525,12 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 pb-2">
             <div>
-              <h1 className="text-4xl font-black tracking-tight mb-5 text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-cyan-500 drop-shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-5 text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-cyan-500 drop-shadow-[0_0_15px_rgba(6,182,212,0.3)]">
                 {classes.length === 0 ? "System Standby" : activeSubjectName}
               </h1>
               
               {classes.length > 0 && (
-                <div className="inline-flex p-1.5 rounded-xl glass-panel overflow-x-auto gap-1">
+                <div className="hidden md:inline-flex p-1.5 rounded-xl glass-panel gap-1">
                   <button onClick={() => setActiveTab('scanner')} className={`px-5 py-2.5 text-[11px] uppercase tracking-widest font-bold rounded-lg transition-all duration-300 whitespace-nowrap ${activeTab === 'scanner' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]' : 'text-slate-400 hover:text-cyan-200 hover:bg-white/5 border border-transparent'}`}>QR Scanner</button>
                   <button onClick={() => setActiveTab('management')} className={`px-5 py-2.5 text-[11px] uppercase tracking-widest font-bold rounded-lg transition-all duration-300 whitespace-nowrap ${activeTab === 'management' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]' : 'text-slate-400 hover:text-cyan-200 hover:bg-white/5 border border-transparent'}`}>ADD Student</button>
                   <button onClick={() => setActiveTab('attendance')} className={`px-5 py-2.5 text-[11px] uppercase tracking-widest font-bold rounded-lg transition-all duration-300 whitespace-nowrap ${activeTab === 'attendance' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]' : 'text-slate-400 hover:text-cyan-200 hover:bg-white/5 border border-transparent'}`}>Master Logs</button>
@@ -652,7 +709,6 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
               
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-8 pt-5 pb-3 border-b border-cyan-500/20 bg-slate-900/30 gap-5">
                 <div className="flex gap-8">
-                  {/* BUG FIX: Replaced shadow- with drop-shadow- and ensured text-shadow logic to avoid the solid black background box */}
                   <button onClick={() => setRecordTab('daily')} className={`pb-3 text-[10px] font-bold uppercase tracking-[0.2em] border-b-2 transition-all duration-300 bg-transparent ${recordTab === 'daily' ? 'border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'border-transparent text-slate-500 hover:text-cyan-500/50'}`}>
                     Daily Logs
                   </button>
