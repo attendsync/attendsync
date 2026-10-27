@@ -23,7 +23,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [wsStatus, setWsStatus] = useState('connecting...'); 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const html5QrCodeRef = useRef(null);
 
   const [classes, setClasses] = useState([]);
@@ -65,17 +65,30 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
 
   useEffect(() => {
     if (!currentSectionCode) return;
-    const fetchRoster = async () => {
+    const fetchRosterAndLogs = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`https://attendsync-6dn6.onrender.com/api/roster/${currentSectionCode}`);
-        const data = await res.json();
-        setRoster(data);
-      } catch (err) { console.error(err); } 
-      finally { setTimeout(() => setIsLoading(false), 300); }
+        // Fetch Roster
+        const rosterRes = await fetch(`https://attendsync-6dn6.onrender.com/api/roster/${currentSectionCode}`);
+        const rosterData = await rosterRes.json();
+        setRoster(rosterData);
+
+        // Fetch Saved Attendance Logs for the selected date
+        const logsRes = await fetch(`https://attendsync-6dn6.onrender.com/api/attendance/${currentSectionCode}?date_filter=${dateFilter}`);
+        if (logsRes.ok) {
+          const logsData = await logsRes.json();
+          setScannedLogs(logsData);
+        } else {
+          setScannedLogs([]);
+        }
+      } catch (err) { 
+        console.error(err); 
+      } finally { 
+        setTimeout(() => setIsLoading(false), 300); 
+      }
     };
-    fetchRoster();
-  }, [currentSectionCode]);
+    fetchRosterAndLogs();
+  }, [currentSectionCode, dateFilter]);
 
   useEffect(() => {
     if (activeTab === 'attendance' && recordTab === 'overall' && currentSectionCode) {
@@ -294,7 +307,6 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
             }
           } catch (e) { toast.error("Uplink Error during processing."); }
           
-          // Increased cooldown to 5 seconds to prevent accidental double-scanning
           setTimeout(() => { try { html5QrCodeRef.current.resume(); } catch (e) {} }, 5000);
         }, () => {} 
       );
@@ -423,7 +435,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
         </div>
       )}
 
-      {/* Desktop Sidebar - Hidden on Mobile */}
+      {/* Desktop Sidebar */}
       <div className="hidden md:flex w-72 flex-col z-10 glass-panel border-y-0 border-l-0 border-r border-cyan-500/20 min-h-screen">
         <div className="p-6 border-b border-cyan-500/20 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl"></div>
@@ -485,8 +497,6 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
       {/* Mobile Menu Dropdown Overlay */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 top-[75px] bg-[#030712]/95 backdrop-blur-xl border-b border-cyan-500/30 z-40 p-6 flex flex-col gap-6 shadow-[0_20px_40px_rgba(0,0,0,0.9)] overflow-y-auto pb-20 animate-in slide-in-from-top-2">
-          
-          {/* Mobile Tabs */}
           {classes.length > 0 && (
             <div>
               <h3 className="text-[9px] font-bold text-cyan-500/70 uppercase tracking-[0.2em] mb-3">Module Control</h3>
@@ -498,7 +508,6 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
             </div>
           )}
 
-          {/* Subjects */}
           <div>
             <h3 className="text-[9px] font-bold text-cyan-500/70 uppercase tracking-[0.2em] mb-3">Active Subjects</h3>
             <div className="flex flex-col gap-2">

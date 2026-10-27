@@ -365,21 +365,31 @@ async def process_overall_scan(scan_data: OverallScanRequest, db: Session = Depe
     return {"msg": "Compilation saved successfully", "data": live_data}
 
 # 10. Fetch Overall Compilation Grades
-@app.get("/api/grades/{section_code}")
-async def get_overall_grades(section_code: str, db: Session = Depends(get_db)):
-    grades = db.query(OverallGrade, models.Student).join(
-        models.Student, OverallGrade.student_id == models.Student.student_number
-    ).filter(OverallGrade.section_code == section_code).order_by(OverallGrade.timestamp.desc()).all()
+@app.get("/api/attendance/{section_code}")
+async def get_attendance_logs(section_code: str, date_filter: str, db: Session = Depends(get_db)):
+    try:
+        parsed_date = datetime.strptime(date_filter, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Expected YYYY-MM-DD.")
+
+    logs = db.query(models.AttendanceLog, models.Student).join(
+        models.Student, models.AttendanceLog.student_id == models.Student.student_number
+    ).filter(
+        models.AttendanceLog.section_code == section_code,
+        models.AttendanceLog.scan_date == parsed_date
+    ).all()
 
     result = []
-    for grade, student in grades:
+    for log, student in logs:
         result.append({
-            "id": grade.id,
-            "student_id": grade.student_id,
+            "id": log.id,
+            "studentId": log.student_id,
             "name": student.name,
-            "grading_period": grade.grading_period,
-            "scores_data": grade.scores_data,
-            "timestamp": grade.timestamp.strftime("%Y-%m-%d %I:%M %p")
+            "type": "QR Pass",
+            "rawDate": str(log.scan_date),
+            "displayDate": log.scan_date.strftime("%b %d, %Y"),
+            "time": log.timestamp.strftime("%I:%M %p"),
+            "status": getattr(log, 'status', 'PRESENT')
         })
     return result
 
