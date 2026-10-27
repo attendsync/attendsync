@@ -165,7 +165,9 @@ async def get_teacher_classes(teacher_id: str, db: Session = Depends(get_db)):
     classes = db.query(models.Section).filter(models.Section.teacher_id == teacher_id).all()
     result = []
     for cls in classes:
-        student_count = db.query(models.Student).filter(models.Student.section_code == cls.section_code).count()
+        student_count = db.query(models.Student).filter(
+            models.Student.section_code.in_(["LFAU411A031", "LFAU411A032", "LFAU411A033", "LFAU411A034", cls.section_code])
+        ).count()
         result.append({
             "id": cls.id,
             "name": cls.name,
@@ -174,18 +176,12 @@ async def get_teacher_classes(teacher_id: str, db: Session = Depends(get_db)):
         })
     return result
 
-# 3. Assign a New Class (Protocol)
+# 3. Assign a New Class (Protocol) - Auto-generates section code internally
 @app.post("/api/classes")
 async def create_class(class_data: ClassCreate, db: Session = Depends(get_db)):
-    sec_code = class_data.section_code
-    if sec_code:
-        sec_code = sec_code.strip()
-    if not sec_code:
+    sec_code = "SUBJ_" + "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", k=6))
+    while db.query(models.Section).filter(models.Section.section_code == sec_code).first():
         sec_code = "SUBJ_" + "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", k=6))
-    
-    existing_section = db.query(models.Section).filter(models.Section.section_code == sec_code).first()
-    if existing_section:
-        raise HTTPException(status_code=400, detail=f"Subject Code '{sec_code}' already exists.")
 
     new_class = models.Section(
         name=class_data.name,
@@ -197,22 +193,23 @@ async def create_class(class_data: ClassCreate, db: Session = Depends(get_db)):
     db.refresh(new_class)
     return {"msg": "Class assigned successfully", "class": new_class}
 
-# 4. Fetch the Official Class Roster
+# 4. Fetch Official Class Roster (Includes all standard sections and current class section)
 @app.get("/api/roster/{section_code}")
 async def get_class_roster(section_code: str, db: Session = Depends(get_db)):
-    students = db.query(models.Student).filter(models.Student.section_code == section_code).all()
+    allowed_defaults = ["LFAU411A031", "LFAU411A032", "LFAU411A033", "LFAU411A034"]
+    query_sections = list(set([section_code] + allowed_defaults))
+    students = db.query(models.Student).filter(models.Student.section_code.in_(query_sections)).all()
     return students
 
-# 4.5 Fetch Global Roster for Teacher (All their classes)
+# 4.5 Fetch Global Roster for Teacher (All students across all sections)
 @app.get("/api/roster/teacher/{teacher_id}")
 async def get_teacher_roster(teacher_id: str, db: Session = Depends(get_db)):
     sections = db.query(models.Section.section_code).filter(models.Section.teacher_id == teacher_id).all()
-    section_codes = [s[0] for s in sections]
+    teacher_section_codes = [s[0] for s in sections]
+    allowed_defaults = ["LFAU411A031", "LFAU411A032", "LFAU411A033", "LFAU411A034"]
+    all_query_codes = list(set(teacher_section_codes + allowed_defaults))
     
-    if not section_codes:
-        return []
-        
-    students = db.query(models.Student).filter(models.Student.section_code.in_(section_codes)).all()
+    students = db.query(models.Student).filter(models.Student.section_code.in_(all_query_codes)).all()
     return students
 
 # 5. Teacher Enrolls a New Student
@@ -301,7 +298,6 @@ async def process_scan(scan_data: ScanRequest, db: Session = Depends(get_db)):
     if not student:
         raise HTTPException(status_code=404, detail=f"Student ID '{student_number}' not found.")
 
-    # Day lock removed dynamically for teacher sections, handles basic logic.
     SCHEDULE_MAP = { "LFAU411A031": "Wednesday", "LFAU411A032": "Saturday", "LFAU411A033": "Tuesday", "LFAU411A034": "Friday" }
     if student.section_code in SCHEDULE_MAP:
         expected_day = SCHEDULE_MAP[student.section_code]
