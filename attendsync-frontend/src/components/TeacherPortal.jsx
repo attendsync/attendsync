@@ -68,12 +68,10 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
     const fetchRosterAndLogs = async () => {
       setIsLoading(true);
       try {
-        // Fetch Roster
         const rosterRes = await fetch(`https://attendsync-6dn6.onrender.com/api/roster/${currentSectionCode}`);
         const rosterData = await rosterRes.json();
         setRoster(rosterData);
 
-        // Fetch Saved Attendance Logs for the selected date
         const logsRes = await fetch(`https://attendsync-6dn6.onrender.com/api/attendance/${currentSectionCode}?date_filter=${dateFilter}`);
         if (logsRes.ok) {
           const logsData = await logsRes.json();
@@ -395,40 +393,49 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
             </div>
             <div className="p-6">
               {(() => {
-                const data = JSON.parse(selectedGradeRecord.scores_data);
-                const cols = selectedGradeRecord.grading_period === 'Finals' ? [1,2] : [1,2,3,4];
-                return (
-                  <table className="w-full text-center border-collapse">
-                    <thead>
-                      <tr className="border-b-2 border-indigo-500/30 text-indigo-400 uppercase tracking-widest text-[10px]">
-                        <th className="p-2 font-bold text-left">Vector</th>
-                        {cols.map(c => <th key={c} className="p-2 font-bold w-12 md:w-16">N-{c}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody className="text-sm divide-y divide-indigo-500/10">
-                      {['quiz', 'recitation', 'project'].map(crit => (
-                        <tr key={crit}>
-                          <td className="p-3 font-medium text-left uppercase tracking-wider text-indigo-200 text-[10px] md:text-xs">{crit}</td>
-                          {cols.map(c => (
-                            <td key={c}>
-                              <div className="w-10 md:w-12 h-9 mx-auto flex items-center justify-center font-mono font-bold rounded bg-indigo-950/50 border border-indigo-500/20 text-indigo-300 transition-all duration-300 hover:bg-indigo-900/50">
-                                {data.scores[crit]?.[c] || '-'}
-                              </div>
-                            </td>
-                          ))}
+                try {
+                  const data = JSON.parse(selectedGradeRecord.scores_data || "{}");
+                  const scores = data.scores || {};
+                  const attendance = data.attendance || {};
+                  const cols = selectedGradeRecord.grading_period === 'Finals' ? [1,2] : [1,2,3,4];
+                  return (
+                    <table className="w-full text-center border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-indigo-500/30 text-indigo-400 uppercase tracking-widest text-[10px]">
+                          <th className="p-2 font-bold text-left">Vector</th>
+                          {cols.map(c => <th key={c} className="p-2 font-bold w-12 md:w-16">N-{c}</th>)}
                         </tr>
-                      ))}
-                      <tr className="bg-indigo-500/10">
-                        <td className="p-3 text-left font-bold uppercase tracking-wider text-cyan-400 text-[10px] md:text-xs">Uplink (ATT)</td>
-                        {cols.map(c => (
-                          <td key={c}>
-                            <div className={`w-3 h-3 mx-auto rounded-full transition-all duration-300 ${data.attendance?.[c] ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-slate-700/50 border border-slate-600'}`}></div>
-                          </td>
+                      </thead>
+                      <tbody className="text-sm divide-y divide-indigo-500/10">
+                        {['quiz', 'recitation', 'project'].map(crit => (
+                          <tr key={crit}>
+                            <td className="p-3 font-medium text-left uppercase tracking-wider text-indigo-200 text-[10px] md:text-xs">{crit}</td>
+                            {cols.map(c => (
+                              <td key={c}>
+                                <div className="w-10 md:w-12 h-9 mx-auto flex items-center justify-center font-mono font-bold rounded bg-indigo-950/50 border border-indigo-500/20 text-indigo-300 transition-all duration-300 hover:bg-indigo-900/50">
+                                  {scores[crit]?.[c] || scores[crit]?.[String(c)] || '-'}
+                                </div>
+                              </td>
+                            ))}
+                          </tr>
                         ))}
-                      </tr>
-                    </tbody>
-                  </table>
-                )
+                        <tr className="bg-indigo-500/10">
+                          <td className="p-3 text-left font-bold uppercase tracking-wider text-cyan-400 text-[10px] md:text-xs">Uplink (ATT)</td>
+                          {cols.map(c => {
+                            const isPresent = attendance[c] || attendance[String(c)];
+                            return (
+                              <td key={c}>
+                                <div className={`w-3 h-3 mx-auto rounded-full transition-all duration-300 ${isPresent ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-slate-700/50 border border-slate-600'}`}></div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      </tbody>
+                    </table>
+                  );
+                } catch (err) {
+                  return <p className="text-rose-400 text-xs font-mono uppercase tracking-widest text-center py-6">Error parsing matrix payload.</p>;
+                }
               })()}
             </div>
           </div>
