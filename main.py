@@ -256,21 +256,6 @@ async def process_scan(scan_data: ScanRequest, db: Session = Depends(get_db)):
     today_pht = pht_now.date()
     current_day_name = pht_now.strftime("%A") 
 
-    SCHEDULE_MAP = {
-        "LFAU411A031": "Wednesday",
-        "LFAU411A032": "Saturday",
-        "LFAU411A033": "Tuesday",
-        "LFAU411A034": "Friday"
-    }
-
-    if scan_data.section_code in SCHEDULE_MAP:
-        expected_day = SCHEDULE_MAP[scan_data.section_code]
-        if current_day_name != expected_day:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Class restricted: {scan_data.section_code} meets on {expected_day}s, but today is {current_day_name}."
-            )
-
     qr_text = scan_data.qr_token.strip()
     student_number = qr_text 
     
@@ -288,8 +273,26 @@ async def process_scan(scan_data: ScanRequest, db: Session = Depends(get_db)):
     student = db.query(models.Student).filter(models.Student.student_number == student_number).first()
     if not student:
         raise HTTPException(status_code=404, detail=f"Student ID '{student_number}' not found.")
-    if student.section_code != scan_data.section_code:
-        raise HTTPException(status_code=400, detail="Student is not enrolled in this section.")
+    
+    # Ensure student belongs to the general subject or is enrolled
+    if student.section_code not in ALLOWED_SECTIONS: # or verify enrollment
+        raise HTTPException(status_code=400, detail="Student section not recognized.")
+
+    # --- SCHEDULE LOCK BASED ON STUDENT'S SECTION ---
+    SCHEDULE_MAP = {
+        "LFAU411A031": "Wednesday",
+        "LFAU411A032": "Saturday",
+        "LFAU411A033": "Tuesday",
+        "LFAU411A034": "Friday"
+    }
+
+    if student.section_code in SCHEDULE_MAP:
+        expected_day = SCHEDULE_MAP[student.section_code]
+        if current_day_name != expected_day:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Attendance restricted: Section {student.section_code} meets on {expected_day}s, but today is {current_day_name}."
+            )
 
     existing_log = db.query(models.AttendanceLog).filter(
         models.AttendanceLog.student_id == student_number,
