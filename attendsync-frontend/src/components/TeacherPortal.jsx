@@ -46,7 +46,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/classes/${teacherId}`);
+        const res = await fetch(`https://attendsync-6dn6.onrender.com/api/classes/${teacherId}`);
         const data = await res.json();
         setClasses(data);
         if (data.length > 0) {
@@ -67,7 +67,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
     const fetchRoster = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`http://localhost:8000/api/roster/${currentSectionCode}`);
+        const res = await fetch(`https://attendsync-6dn6.onrender.com/api/roster/${currentSectionCode}`);
         const data = await res.json();
         setRoster(data);
       } catch (err) { console.error(err); } 
@@ -78,7 +78,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
 
   useEffect(() => {
     if (activeTab === 'attendance' && recordTab === 'overall' && currentSectionCode) {
-      fetch(`http://localhost:8000/api/grades/${currentSectionCode}`)
+      fetch(`https://attendsync-6dn6.onrender.com/api/grades/${currentSectionCode}`)
         .then(res => res.json())
         .then(data => setOverallGrades(data))
         .catch(() => toast.error("Failed to load overall gradebook storage."));
@@ -88,7 +88,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   useEffect(() => {
     if (!currentSectionCode) return;
     setWsStatus('Connecting to Matrix...');
-    const ws = new WebSocket(`ws://localhost:8000/ws/attendance/${currentSectionCode}`);
+    const ws = new WebSocket(`wss://attendsync-6dn6.onrender.com/ws/attendance/${currentSectionCode}`);
 
     ws.onopen = () => setWsStatus('Status: Active');
     ws.onmessage = (event) => {
@@ -121,7 +121,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   const handleExportDailyCSV = async () => {
     if (!currentSectionCode) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/export/attendance/${currentSectionCode}?date_filter=${dateFilter}`);
+      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/export/attendance/${currentSectionCode}?date_filter=${dateFilter}`);
       if (!res.ok) {
         const err = await res.json();
         toast.error(err.detail || "No records found.", { style: { background: '#450a0a', color: '#f87171', border: '1px solid #991b1b' } });
@@ -144,7 +144,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   const handleExportOverallCSV = async () => {
     if (!currentSectionCode) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/export/grades/${currentSectionCode}`);
+      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/export/grades/${currentSectionCode}`);
       if (!res.ok) {
         const err = await res.json();
         toast.error(err.detail || "No records found.");
@@ -168,7 +168,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
     e.preventDefault();
     if (!newClassForm.name || !newClassForm.section_code) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/classes`, {
+      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/classes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...newClassForm, teacher_id: teacherId })
@@ -193,7 +193,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
     e.preventDefault();
     if (!newStudent.student_number || !newStudent.name || !newStudent.section_code) return toast.error("Incomplete Data.");
     try {
-      const res = await fetch(`http://localhost:8000/api/students`, {
+      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/students`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newStudent)
@@ -214,7 +214,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   const handleRemoveStudent = async (studentNumber) => {
     if(!window.confirm("Purge this identity from the database?")) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/students/${studentNumber}`, { method: 'DELETE' });
+      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/students/${studentNumber}`, { method: 'DELETE' });
       if (res.ok) {
         setRoster(roster.filter(student => student.student_number !== studentNumber));
         setClasses(prev => prev.map(c => c.section === currentSectionCode ? { ...c, students: Math.max(0, c.students - 1) } : c));
@@ -266,7 +266,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
             } catch(e){}
 
             if (isOverall) {
-               const res = await fetch(`http://localhost:8000/api/scan/overall`, {
+               const res = await fetch(`https://attendsync-6dn6.onrender.com/api/scan/overall`, {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({
@@ -278,7 +278,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                });
                if (!res.ok) toast.error(`Auth Failed: ${(await res.json()).detail}`);
             } else {
-               const res = await fetch(`http://localhost:8000/api/scan`, { 
+               const res = await fetch(`https://attendsync-6dn6.onrender.com/api/scan`, { 
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({ qr_token: decodedText, section_code: currentSectionCode })

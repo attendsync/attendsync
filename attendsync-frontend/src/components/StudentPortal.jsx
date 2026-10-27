@@ -22,7 +22,7 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/student/dashboard/${schoolId}`);
+        const res = await fetch(`https://attendsync-6dn6.onrender.com/api/student/dashboard/${schoolId}`);
         if (res.ok) {
           const result = await res.json();
           setData(result);

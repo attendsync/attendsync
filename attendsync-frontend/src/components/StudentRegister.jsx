@@ -38,7 +38,7 @@ export default function StudentRegister({ onBackToLogin }) {
 
     setIsLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/students/request-verification`, {
+      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/students/request-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -67,7 +67,7 @@ export default function StudentRegister({ onBackToLogin }) {
     setError(null);
     setIsLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/students/verify-and-create`, {
+      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/students/verify-and-create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
