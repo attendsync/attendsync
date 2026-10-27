@@ -719,7 +719,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                     <label className="text-[9px] font-bold uppercase tracking-[0.2em] mb-2 text-indigo-300/70">Section</label>
                     <select value={newStudent.section_code} onChange={(e) => setNewStudent({...newStudent, section_code: e.target.value})}
                       className="px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-indigo-500/30 text-indigo-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none transition-all duration-300 [&>option]:bg-slate-900">
-                      {classes.map(c => <option key={c.id} value={c.section}>{c.section}</option>)}
+                      {ALLOWED_SECTIONS.map(sec => <option key={sec} value={sec}>{sec}</option>)}
                     </select>
                   </div>
                   <button type="submit" className="w-full px-6 py-3 h-[42px] bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-400/50 font-bold text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(99,102,241,0.2)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] whitespace-nowrap">
