@@ -514,7 +514,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto w-full relative z-10">
+      <div className={`flex-1 p-4 md:p-8 lg:p-10 w-full relative z-10 ${isMobileMenuOpen ? 'overflow-hidden max-h-[calc(100vh-75px)]' : 'overflow-y-auto'}`}>
         {isLoading && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center glass-panel">
             <div className="loader mb-4"></div>

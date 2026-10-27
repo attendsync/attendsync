@@ -216,7 +216,7 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 p-6 md:p-8 lg:p-12 overflow-y-auto z-10 w-full">
+      <div className={`flex-1 p-6 md:p-8 lg:p-12 z-10 w-full ${isMobileMenuOpen ? 'overflow-hidden max-h-[calc(100vh-75px)]' : 'overflow-y-auto'}`}>
         {activeSubject ? (
           <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-500">
             
