@@ -4,8 +4,6 @@ import os
 import random
 import json
 import re  
-import urllib.request
-import urllib.error
 from dotenv import load_dotenv
 load_dotenv()
 from datetime import date, datetime, timedelta 
@@ -235,7 +233,7 @@ async def remove_student(student_number: str, db: Session = Depends(get_db)):
     db.commit()
     return {"msg": "Student removed successfully"}
 
-# 7. Request Email Verification (Via Resend HTTP API)
+# 7. Request Verification (Instant On-Screen Code Generation)
 @app.post("/api/students/request-verification")
 async def request_verification(student: StudentRegister, db: Session = Depends(get_db)):
     existing_student = db.query(models.Student).filter(models.Student.student_number == student.student_number).first()
@@ -248,46 +246,10 @@ async def request_verification(student: StudentRegister, db: Session = Depends(g
     verification_code = str(random.randint(100000, 999999))
     pending_verifications[student.email] = verification_code
 
-    api_key = os.getenv("RESEND_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="RESEND_API_KEY is not configured on the server.")
-
-    email_payload = {
-        "from": "AttendSync <attendsync1@gmail.com>",
-        "to": [student.email],
-        "subject": "AttendSync - Email Verification Code",
-        "html": f"""
-        <html><body>
-            <h2>Welcome to AttendSync!</h2>
-            <p>Hi {student.first_name},</p>
-            <p>Your verification code is: <strong><span style="font-size: 24px; color: #0a58ca;">{verification_code}</span></strong></p>
-        </body></html>
-        """
+    return {
+        "msg": "Verification code generated successfully",
+        "debug_code": verification_code
     }
-
-    req = urllib.request.Request(
-        "https://api.resend.com/emails",
-        data=json.dumps(email_payload).encode('utf-8'),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        },
-        method="POST"
-    )
-
-    try:
-        with urllib.request.urlopen(req) as response:
-            if response.status not in [200, 201]:
-                raise HTTPException(status_code=500, detail="Failed to dispatch verification email via API.")
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode('utf-8')
-        print(f"\n❌ RESEND API ERROR: {error_body}\n")
-        raise HTTPException(status_code=500, detail="Email API dispatch failed.")
-    except Exception as e:
-        print(f"\n❌ HTTP EMAIL ERROR: {e}\n")
-        raise HTTPException(status_code=500, detail="Network error while sending email.")
-
-    return {"msg": "Verification code sent successfully"}
 
 # 8. Verify Code and Create Account
 @app.post("/api/students/verify-and-create")
