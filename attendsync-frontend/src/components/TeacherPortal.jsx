@@ -277,17 +277,25 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                    scores_data: JSON.stringify(parsed.data)
                  })
                });
-               if (!res.ok) toast.error(`Auth Failed: ${(await res.json()).detail}`);
+               if (!res.ok) {
+                 const err = await res.json();
+                 toast.error(`Auth Failed: ${err.detail}`);
+               }
             } else {
                const res = await fetch(`https://attendsync-6dn6.onrender.com/api/scan`, { 
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({ qr_token: decodedText, section_code: currentSectionCode })
                });
-               if (!res.ok) toast.error(`Auth Failed: ${(await res.json()).detail}`);
+               const data = await res.json();
+               if (!res.ok) {
+                 toast.error(`Auth Failed: ${data.detail}`);
+               }
             }
           } catch (e) { toast.error("Uplink Error during processing."); }
-          setTimeout(() => { try { html5QrCodeRef.current.resume(); } catch (e) {} }, 2500);
+          
+          // Increased cooldown to 5 seconds to prevent accidental double-scanning
+          setTimeout(() => { try { html5QrCodeRef.current.resume(); } catch (e) {} }, 5000);
         }, () => {} 
       );
       setIsCameraActive(true);
