@@ -82,7 +82,7 @@ class StudentCreate(BaseModel):
 
 class ClassCreate(BaseModel):
     name: str
-    section_code: str
+    section_code: Optional[str] = None
     teacher_id: str
 
 class LoginRequest(BaseModel):
@@ -174,16 +174,20 @@ async def get_teacher_classes(teacher_id: str, db: Session = Depends(get_db)):
         })
     return result
 
-# 3. Assign a New Class
+# 3. Assign a New Class (Protocol)
 @app.post("/api/classes")
 async def create_class(class_data: ClassCreate, db: Session = Depends(get_db)):
-    existing_section = db.query(models.Section).filter(models.Section.section_code == class_data.section_code).first()
+    sec_code = class_data.section_code
+    if not sec_code:
+        sec_code = "SUBJ_" + "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", k=6))
+    
+    existing_section = db.query(models.Section).filter(models.Section.section_code == sec_code).first()
     if existing_section:
-        raise HTTPException(status_code=400, detail="Section code already exists.")
+        sec_code = "SUBJ_" + "".join(random.choices("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", k=6))
 
     new_class = models.Section(
         name=class_data.name,
-        section_code=class_data.section_code,
+        section_code=sec_code,
         teacher_id=class_data.teacher_id
     )
     db.add(new_class)
@@ -197,12 +201,23 @@ async def get_class_roster(section_code: str, db: Session = Depends(get_db)):
     students = db.query(models.Student).filter(models.Student.section_code == section_code).all()
     return students
 
-# 5. Teacher Enrolls a New Student
+# 5. Teacher Enrolls a New Student (Auto-creates section if not present to avoid FK errors)
 @app.post("/api/students")
 async def enroll_student(student_data: StudentCreate, db: Session = Depends(get_db)):
     existing_student = db.query(models.Student).filter(models.Student.student_number == student_data.student_number).first()
     if existing_student:
         raise HTTPException(status_code=400, detail="Student number already registered.")
+
+    # Ensure section exists in sections table to prevent IntegrityError (500)
+    existing_section = db.query(models.Section).filter(models.Section.section_code == student_data.section_code).first()
+    if not existing_section:
+        new_sec = models.Section(
+            name=f"Section {student_data.section_code}",
+            section_code=student_data.section_code,
+            teacher_id="TCH-2026"
+        )
+        db.add(new_sec)
+        db.commit()
 
     new_student = models.Student(
         student_number=student_data.student_number,
@@ -226,7 +241,7 @@ async def remove_student(student_number: str, db: Session = Depends(get_db)):
     db.commit()
     return {"msg": "Student removed successfully"}
 
-# 7. Direct Student Registration (No Email Verification Required)
+# 7. Direct Student Registration
 @app.post("/api/students/register")
 async def register_student_direct(student: DirectStudentRegister, db: Session = Depends(get_db)):
     existing_student = db.query(models.Student).filter(models.Student.student_number == student.student_number).first()
@@ -249,7 +264,7 @@ async def register_student_direct(student: DirectStudentRegister, db: Session = 
     
     return {"msg": "Account registered successfully!"}
 
-# 8. Process QR Scan (DAILY ATTENDANCE)
+# 8. Process QR Scan (DAILY ATTENDANCE - Day-locked based on student's actual section)
 @app.post("/api/scan")
 async def process_scan(scan_data: ScanRequest, db: Session = Depends(get_db)):
     pht_now = datetime.utcnow() + timedelta(hours=8)
@@ -273,12 +288,7 @@ async def process_scan(scan_data: ScanRequest, db: Session = Depends(get_db)):
     student = db.query(models.Student).filter(models.Student.student_number == student_number).first()
     if not student:
         raise HTTPException(status_code=404, detail=f"Student ID '{student_number}' not found.")
-    
-    # Ensure student belongs to the general subject or is enrolled
-    if student.section_code not in ALLOWED_SECTIONS: # or verify enrollment
-        raise HTTPException(status_code=400, detail="Student section not recognized.")
 
-    # --- SCHEDULE LOCK BASED ON STUDENT'S SECTION ---
     SCHEDULE_MAP = {
         "LFAU411A031": "Wednesday",
         "LFAU411A032": "Saturday",
@@ -332,8 +342,6 @@ async def process_overall_scan(scan_data: OverallScanRequest, db: Session = Depe
     student = db.query(models.Student).filter(models.Student.student_number == scan_data.student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found.")
-    if student.section_code != scan_data.section_code:
-        raise HTTPException(status_code=400, detail="Section mismatch. Student belongs to another section.")
 
     existing = db.query(OverallGrade).filter(
         OverallGrade.student_id == scan_data.student_id,

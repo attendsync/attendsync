@@ -33,8 +33,8 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
 
   const [showClassModal, setShowClassModal] = useState(false);
   const [selectedGradeRecord, setSelectedGradeRecord] = useState(null);
-  const [newClassForm, setNewClassForm] = useState({ name: '', section_code: ALLOWED_SECTIONS[0] });
-  const [newStudent, setNewStudent] = useState({ student_number: '', program: 'BSIT', section_code: '', name: '', email: '' });
+  const [newClassForm, setNewClassForm] = useState({ name: '' });
+  const [newStudent, setNewStudent] = useState({ student_number: '', program: 'BSIT', section_code: ALLOWED_SECTIONS[0], name: '', email: '' });
   
   const [searchQuery, setSearchQuery] = useState('');
   const [sectionFilter, setSectionFilter] = useState('All');
@@ -52,7 +52,6 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
         setClasses(data);
         if (data.length > 0) {
           setActiveSection(data[0].section);
-          setNewStudent(prev => ({ ...prev, section_code: data[0].section }));
         }
       } catch (err) {
         toast.error("Failed to load handled classes.", { style: { background: '#0f172a', color: '#38bdf8', border: '1px solid #0369a1' } });
@@ -137,7 +136,6 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   const handleSubjectChange = (sectionCode) => {
     if (sectionCode === activeSection) return;
     setActiveSection(sectionCode);
-    setNewStudent(prev => ({ ...prev, section_code: sectionCode }));
   };
 
   const handleExportDailyCSV = async () => {
@@ -188,21 +186,20 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
 
   const handleAssignClass = async (e) => {
     e.preventDefault();
-    if (!newClassForm.name || !newClassForm.section_code) return;
+    if (!newClassForm.name) return;
     try {
       const res = await fetch(`https://attendsync-6dn6.onrender.com/api/classes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newClassForm, teacher_id: teacherId })
+        body: JSON.stringify({ name: newClassForm.name, teacher_id: teacherId })
       });
       if (res.ok) {
         const added = await res.json();
         const newClassObj = { id: added.class.id, name: added.class.name, section: added.class.section_code, students: 0 };
         setClasses(prev => [...prev, newClassObj]);
         setActiveSection(newClassObj.section);
-        setNewStudent(prev => ({ ...prev, section_code: newClassObj.section }));
         setShowClassModal(false);
-        setNewClassForm({ name: '', section_code: ALLOWED_SECTIONS[0] });
+        setNewClassForm({ name: '' });
         toast.success("New Protocol Assigned!");
       } else {
         const err = await res.json();
@@ -224,7 +221,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
         const addedStudent = await res.json();
         setRoster(prev => [...prev, addedStudent.student]);
         setClasses(prev => prev.map(c => c.section === currentSectionCode ? { ...c, students: c.students + 1 } : c));
-        setNewStudent({ student_number: '', program: 'BSIT', section_code: currentSectionCode, name: '', email: '' });
+        setNewStudent({ student_number: '', program: 'BSIT', section_code: ALLOWED_SECTIONS[0], name: '', email: '' });
         toast.success(`Identity Registered: ${addedStudent.student.name}`);
       } else {
         const err = await res.json();
@@ -381,15 +378,8 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
             <form onSubmit={handleAssignClass} className="space-y-5">
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-widest mb-1.5 block text-cyan-500/70">Protocol / Course Name</label>
-                <input type="text" placeholder="e.g. Data Structures" required value={newClassForm.name} onChange={e => setNewClassForm({...newClassForm, name: e.target.value})}
+                <input type="text" placeholder="e.g. Data Structures" required value={newClassForm.name} onChange={e => setNewClassForm({name: e.target.value})}
                   className="w-full px-4 py-3 text-sm rounded-lg bg-slate-900/50 border border-cyan-500/30 text-cyan-50 placeholder-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest mb-1.5 block text-cyan-500/70">Section (Section)</label>
-                <select required value={newClassForm.section_code} onChange={e => setNewClassForm({...newClassForm, section_code: e.target.value})}
-                  className="w-full px-4 py-3 text-sm rounded-lg bg-slate-900/50 border border-cyan-500/30 text-cyan-50 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300 [&>option]:bg-slate-900">
-                  {ALLOWED_SECTIONS.map(sec => <option key={sec} value={sec}>{sec}</option>)}
-                </select>
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowClassModal(false)} className="flex-1 py-3 rounded-lg text-xs font-bold uppercase tracking-widest bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-colors duration-300">Abort</button>
