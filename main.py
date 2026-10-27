@@ -253,7 +253,7 @@ async def request_verification(student: StudentRegister, db: Session = Depends(g
         raise HTTPException(status_code=500, detail="RESEND_API_KEY is not configured on the server.")
 
     email_payload = {
-        "from": "AttendSync <onboarding@resend.dev>",
+        "from": "AttendSync <attendsync1@gmail.com>",
         "to": [student.email],
         "subject": "AttendSync - Email Verification Code",
         "html": f"""
