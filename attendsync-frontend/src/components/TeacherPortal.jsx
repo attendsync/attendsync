@@ -235,15 +235,15 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
   };
 
   const handleRemoveStudent = async (studentNumber) => {
-    if(!window.confirm("Purge this identity from the database?")) return;
+    if(!window.confirm("Delete this identity from the database?")) return;
     try {
       const res = await fetch(`https://attendsync-6dn6.onrender.com/api/students/${studentNumber}`, { method: 'DELETE' });
       if (res.ok) {
         setRoster(roster.filter(student => student.student_number !== studentNumber));
         setClasses(prev => prev.map(c => c.section === currentSectionCode ? { ...c, students: Math.max(0, c.students - 1) } : c));
-        toast.success("Identity Purged.");
+        toast.success("Identity Deleted.");
       }
-    } catch (err) { toast.error("Purge Failed."); }
+    } catch (err) { toast.error("Delete Failed."); }
   };
 
   const attendanceList = roster.map(student => {
@@ -516,7 +516,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
 
         <div className="p-4 border-t border-cyan-500/20 space-y-2">
           <button onClick={handleLogout} className="w-full py-3 text-xs text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all duration-300 text-left px-4 flex items-center font-bold tracking-widest uppercase border border-transparent hover:border-rose-500/30">
-             <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg> Terminate Session
+             <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg> Logout
           </button>
         </div>
       </div>
@@ -707,7 +707,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                   </div>
                   <div className="flex flex-col">
                     <label className="text-[9px] font-bold uppercase tracking-[0.2em] mb-2 text-indigo-300/70">Email Account</label>
-                    <input type="email" placeholder="student@icct.edu.ph" required value={newStudent.email} onChange={(e) => setNewStudent({...newStudent, email: e.target.value})}
+                    <input type="email" placeholder="student@gmail.com" required value={newStudent.email} onChange={(e) => setNewStudent({...newStudent, email: e.target.value})}
                       className="px-4 py-3 text-xs font-mono rounded-xl bg-slate-900/60 border border-indigo-500/30 text-indigo-50 placeholder-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none transition-all duration-300" />
                   </div>
                   <div className="flex flex-col">
@@ -756,7 +756,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                             </td>
                             <td className="px-8 py-5 text-[11px] font-mono text-slate-400">{student.email}</td>
                             <td className="px-8 py-5 text-right">
-                              <button onClick={() => handleRemoveStudent(student.student_number)} className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-500 hover:text-rose-400 hover:drop-shadow-[0_0_5px_rgba(244,63,94,0.8)] transition-all duration-300">Purge</button>
+                              <button onClick={() => handleRemoveStudent(student.student_number)} className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-500 hover:text-rose-400 hover:drop-shadow-[0_0_5px_rgba(244,63,94,0.8)] transition-all duration-300">Delete</button>
                             </td>
                           </tr>
                         ))
@@ -809,7 +809,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                         className="w-full md:w-auto px-4 py-2.5 text-xs font-mono rounded-xl bg-slate-900/60 border border-cyan-500/30 text-cyan-400 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300 cursor-pointer" />
                       <select value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}
                         className="w-full md:w-auto px-4 py-2.5 text-xs font-mono rounded-xl bg-slate-900/60 border border-cyan-500/30 text-cyan-400 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all duration-300 cursor-pointer [&>option]:bg-slate-900">
-                        <option value="All">Global Nodes</option>
+                        <option value="All">Sections</option>
                         {classes.map(c => <option key={c.id} value={c.section}>{c.section}</option>)}
                       </select>
                       <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
@@ -878,7 +878,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                       <thead>
                         <tr className="border-b border-slate-700/50">
                           <th className="px-8 py-4 font-bold text-[9px] text-indigo-500/70 uppercase tracking-[0.2em]">Student</th>
-                          <th className="px-8 py-4 font-bold text-[9px] text-indigo-500/70 uppercase tracking-[0.2em]">Cycle Phase</th>
+                          <th className="px-8 py-4 font-bold text-[9px] text-indigo-500/70 uppercase tracking-[0.2em]">Term</th>
                           <th className="px-8 py-4 font-bold text-[9px] text-indigo-500/70 uppercase tracking-[0.2em]">Sync Time</th>
                           <th className="px-8 py-4 font-bold text-[9px] text-indigo-500/70 uppercase tracking-[0.2em] text-right">Action</th>
                         </tr>
@@ -901,7 +901,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                               <td className="px-8 py-4 text-[11px] font-mono text-slate-400">{grade.timestamp}</td>
                               <td className="px-8 py-4 text-right">
                                 <button onClick={() => setSelectedGradeRecord(grade)} className="px-5 py-2.5 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-400/50 font-bold text-[9px] uppercase tracking-[0.2em] rounded-lg transition-all duration-300 shadow-[0_0_10px_rgba(99,102,241,0.2)] hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]">
-                                  Access Matrix
+                                  Access Data
                                 </button>
                               </td>
                             </tr>

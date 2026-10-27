@@ -140,11 +140,11 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
         <div className="p-6 border-b border-cyan-500/20 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl"></div>
           <div className="flex items-center gap-3 mb-8 relative z-10">
-            <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 font-bold px-2 py-1 rounded text-[9px] tracking-[0.2em] shadow-[0_0_10px_rgba(6,182,212,0.3)]">SYS</span>
+            <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 font-bold px-2 py-1 rounded text-[9px] tracking-[0.2em] shadow-[0_0_10px_rgba(6,182,212,0.3)]">ICCT</span>
             <span className="font-bold tracking-widest text-sm uppercase text-slate-100">AttendSync</span>
           </div>
           <div className="relative z-10">
-            <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold px-2.5 py-0.5 rounded uppercase tracking-[0.2em] mb-3 inline-block">Student Node</span>
+            <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold px-2.5 py-0.5 rounded uppercase tracking-[0.2em] mb-3 inline-block">Student</span>
             <p className="font-bold text-lg leading-tight mt-1 text-cyan-50">{data.name}</p>
             <p className="text-xs text-cyan-500/60 mt-1 font-mono tracking-wider">UID: {data.student_number}</p>
           </div>
@@ -171,7 +171,7 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
 
         <div className="p-4 border-t border-cyan-500/20 space-y-2">
           <button onClick={handleLogout} className="w-full py-3 text-xs text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all text-left px-4 flex items-center font-bold tracking-widest uppercase border border-transparent hover:border-rose-500/30">
-             <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg> Disconnect
+             <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg> Logout
           </button>
         </div>
       </div>
@@ -223,17 +223,17 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-cyan-500/20 pb-6 gap-4">
               <div>
                 <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-cyan-500 drop-shadow-[0_0_15px_rgba(6,182,212,0.3)]">{activeSubject.name}</h1>
-                <p className="font-mono text-cyan-500/70 tracking-widest text-xs uppercase">Node Designation: <span className="text-cyan-300 font-bold">{activeSubject.section_code}</span></p>
+                <p className="font-mono text-cyan-500/70 tracking-widest text-xs uppercase">Section: <span className="text-cyan-300 font-bold">{activeSubject.section_code}</span></p>
               </div>
             </div>
 
             <div>
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 text-cyan-500/70">Metrics Overview</h2>
+              <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 text-cyan-500/70">Dashboard Overview</h2>
               <div className="flex flex-col md:flex-row items-center justify-between p-8 rounded-3xl glass-panel relative overflow-hidden group">
                 <div className="absolute left-0 top-0 bottom-0 w-2 bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,1)] z-10"></div>
                 <div className="absolute inset-0 bg-emerald-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                 <div className="relative z-10 mb-6 md:mb-0 text-center md:text-left">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400/80">Successful Uplinks (Present)</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400/80">Successful Attendance (Present)</p>
                   <p className="text-5xl font-mono font-black mt-2 text-emerald-300 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">{activeSubject.total_present}</p>
                 </div>
                 <div className="flex items-center gap-5 relative z-10 w-full md:w-auto justify-center">
@@ -252,7 +252,7 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
                 {!qrValue ? (
                   <div className="flex flex-col items-center w-full py-4 relative z-10">
                     <QRIcon />
-                    <h3 className="text-lg font-black tracking-[0.15em] uppercase text-cyan-100 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">Daily Key</h3>
+                    <h3 className="text-lg font-black tracking-[0.15em] uppercase text-cyan-100 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">Daily QR</h3>
                     <p className="text-[9px] mt-2 text-cyan-500/70 font-mono tracking-widest uppercase mb-8">Ready to compile payload</p>
                     <button onClick={handleGenerateDailyQR} className="px-6 py-3.5 bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-300 border border-cyan-400/50 font-bold text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] w-full">Compile QR</button>
                   </div>
@@ -263,7 +263,7 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
                       <QRCodeSVG value={qrValue} size={180} level={"L"} />
                     </div>
                     <h3 className="font-bold text-cyan-300 tracking-[0.15em] uppercase drop-shadow-[0_0_5px_rgba(103,232,249,0.8)]">Awaiting Scan</h3>
-                    <button onClick={() => setQrValue('')} className="mt-6 text-[10px] font-bold text-cyan-500/80 hover:text-cyan-300 uppercase tracking-widest transition-colors">← Abort Compile</button>
+                    <button onClick={() => setQrValue('')} className="mt-6 text-[10px] font-bold text-cyan-500/80 hover:text-cyan-300 uppercase tracking-widest transition-colors">← Cancel Compile</button>
                   </div>
                 )}
               </div>
@@ -271,7 +271,7 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
               {/* HISTORY TABLE */}
               <div className="col-span-2 rounded-3xl glass-panel flex flex-col overflow-hidden">
                 <div className="px-8 py-6 border-b border-cyan-500/20 bg-slate-900/30">
-                  <h3 className="font-bold text-sm uppercase tracking-[0.15em] text-cyan-100">Telemetry History</h3>
+                  <h3 className="font-bold text-sm uppercase tracking-[0.15em] text-cyan-100">Attendance History</h3>
                 </div>
                 <div className="overflow-x-auto flex-1 p-2">
                   <table className="w-full text-left text-sm whitespace-nowrap">
@@ -331,7 +331,7 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
                   <option value="Finals">Finals (2)</option>
                 </select>
               </div>
-              <button onClick={() => { setShowOverallModal(false); setOverallQrValue(''); }} className="p-2 font-bold text-rose-500 hover:text-rose-400 hover:drop-shadow-[0_0_8px_rgba(244,63,94,0.8)] transition-all text-xs tracking-widest uppercase">Abort</button>
+              <button onClick={() => { setShowOverallModal(false); setOverallQrValue(''); }} className="p-2 font-bold text-rose-500 hover:text-rose-400 hover:drop-shadow-[0_0_8px_rgba(244,63,94,0.8)] transition-all text-xs tracking-widest uppercase">Cancel</button>
             </div>
             
             <div className="p-4 md:p-6 overflow-y-auto max-h-[80vh] custom-scrollbar">
@@ -363,7 +363,7 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
                       </tr>
                     ))}
                     <tr className="bg-indigo-500/10">
-                      <td className="p-3 text-left font-bold uppercase tracking-wider text-cyan-400 text-[10px] md:text-[11px]">Uplink</td>
+                      <td className="p-3 text-left font-bold uppercase tracking-wider text-cyan-400 text-[10px] md:text-[11px]">Attendance</td>
                       {activeColumns.map((col) => (
                         <td key={col}>
                           <div className={`w-3 h-3 mx-auto rounded-full ${autoAttendance[col] ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-slate-700/50 border border-slate-600'}`}></div>
@@ -384,7 +384,7 @@ export default function StudentPortal({ schoolId, token, handleLogout }) {
                   </div>
                   <h3 className="font-bold text-indigo-300 tracking-[0.15em] uppercase drop-shadow-[0_0_5px_rgba(165,180,252,0.8)]">Ready for Transmission</h3>
                   <p className="text-[9px] uppercase tracking-[0.2em] mt-2 text-indigo-500/70 font-mono">Present Payload to Commander</p>
-                  <button onClick={() => setOverallQrValue('')} className="mt-6 text-[9px] font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-colors">← Abort Compile</button>
+                  <button onClick={() => setOverallQrValue('')} className="mt-6 text-[9px] font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-colors">← Cancel Compile</button>
                 </div>
               )}
             </div>
