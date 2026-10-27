@@ -285,7 +285,7 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
             let isOverall = false;
             try {
               parsed = JSON.parse(decodedText);
-              if (parsed.type === 'Overall Compilation') isOverall = true;
+              if (parsed.type === 'Overall Compilation' || parsed.scores) isOverall = true;
             } catch(e){}
 
             if (isOverall) {
@@ -296,15 +296,24 @@ export default function TeacherPortal({ schoolId, teacherName, token, handleLogo
                    student_id: parsed.student_id,
                    section_code: currentSectionCode, 
                    grading_period: parsed.grading_period,
-                   scores_data: JSON.stringify(parsed.data)
+                   scores_data: typeof parsed.data === 'string' ? parsed.data : JSON.stringify(parsed.data || parsed)
                  })
                });
-               if (!res.ok) {
+               
+               if (res.ok) {
+                 toast.success(`Vault Compiled: ${parsed.student_id}`, { style: { background: '#022c22', color: '#34d399', border: '1px solid #059669' } });
+                 // Refresh overall grades list if currently viewing master vault
+                 const vaultRes = await fetch(`https://attendsync-6dn6.onrender.com/api/grades/${currentSectionCode}`);
+                 if (vaultRes.ok) {
+                   const vaultData = await vaultRes.json();
+                   setOverallGrades(Array.isArray(vaultData) ? vaultData : []);
+                 }
+               } else {
                  const err = await res.json();
-                 toast.error(`Auth Failed: ${err.detail}`);
+                 toast.error(`Auth Failed: ${err.detail || 'Transmission Rejected'}`);
                }
             } else {
-               const res = await fetch(`https://attendsync-6dn6.onrender.com/api/scan`, { 
+               const res = await fetch(`https://attendsync-6dnches.onrender.com/api/scan`, { 
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({ qr_token: decodedText, section_code: currentSectionCode })

@@ -341,6 +341,8 @@ async def process_overall_scan(scan_data: OverallScanRequest, db: Session = Depe
     if existing:
         existing.scores_data = scan_data.scores_data
         existing.timestamp = pht_now
+        db.commit()
+        db.refresh(existing)
     else:
         new_grade = OverallGrade(
             student_id=scan_data.student_id,
@@ -350,8 +352,8 @@ async def process_overall_scan(scan_data: OverallScanRequest, db: Session = Depe
             timestamp=pht_now
         )
         db.add(new_grade)
-    
-    db.commit()
+        db.commit()
+        db.refresh(new_grade)
     
     live_data = {
         "studentId": student.student_number,
@@ -365,6 +367,26 @@ async def process_overall_scan(scan_data: OverallScanRequest, db: Session = Depe
     return {"msg": "Compilation saved successfully", "data": live_data}
 
 # 10. Fetch Overall Compilation Grades
+@app.get("/api/grades/{section_code}")
+async def get_overall_grades(section_code: str, db: Session = Depends(get_db)):
+    grades = db.query(OverallGrade, models.Student).join(
+        models.Student, OverallGrade.student_id == models.Student.student_number
+    ).filter(OverallGrade.section_code == section_code).all()
+
+    result = []
+    for grade, student in grades:
+        result.append({
+            "id": grade.id,
+            "student_id": grade.student_id,
+            "name": student.name,
+            "section_code": grade.section_code,
+            "grading_period": grade.grading_period,
+            "scores_data": grade.scores_data,
+            "timestamp": grade.timestamp.strftime("%b %d, %Y %I:%M %p")
+        })
+    return result
+
+# 11. Fetch Daily Attendance Logs
 @app.get("/api/attendance/{section_code}")
 async def get_attendance_logs(section_code: str, date_filter: str, db: Session = Depends(get_db)):
     try:
@@ -393,7 +415,7 @@ async def get_attendance_logs(section_code: str, date_filter: str, db: Session =
         })
     return result
 
-# 11. Export Daily Attendance to CSV (FIXED FOR POSTGRESQL DATE PARSING)
+# 12. Export Daily Attendance to CSV
 @app.get("/api/export/attendance/{section_code}")
 async def export_attendance_csv(section_code: str, date_filter: str, db: Session = Depends(get_db)):
     try:
@@ -425,7 +447,7 @@ async def export_attendance_csv(section_code: str, date_filter: str, db: Session
     response.headers["Content-Disposition"] = f"attachment; filename=Attendance_{section_code}_{date_filter}.csv"
     return response
 
-# 12. Export Overall Gradebook to CSV
+# 13. Export Overall Gradebook to CSV
 @app.get("/api/export/grades/{section_code}")
 async def export_grades_csv(section_code: str, db: Session = Depends(get_db)):
     grades = db.query(OverallGrade, models.Student).join(
@@ -470,7 +492,7 @@ async def export_grades_csv(section_code: str, db: Session = Depends(get_db)):
     response.headers["Content-Disposition"] = f"attachment; filename=Gradebook_{section_code}.csv"
     return response
 
-# 13. Student Portal Dashboard Data
+# 14. Student Portal Dashboard Data
 @app.get("/api/student/dashboard/{student_number}")
 async def get_student_dashboard(student_number: str, db: Session = Depends(get_db)):
     student = db.query(models.Student).filter(models.Student.student_number == student_number).first()
