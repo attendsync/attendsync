@@ -18,8 +18,6 @@ export default function StudentRegister({ onBackToLogin }) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -38,58 +36,24 @@ export default function StudentRegister({ onBackToLogin }) {
 
     setIsLoading(true);
     try {
-      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/students/request-verification`, {
+      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/students/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
       
       if (res.ok) {
-        setShowVerifyModal(true);
-        toast.success(`Verification code dispatched to ${formData.email}`, {
+        toast.success("Account registered successfully! Please log in.", {
           style: { background: '#022c22', color: '#34d399', border: '1px solid #059669' }
         });
-      } else {
-        const errData = await res.json();
-        setError(errData.detail);
-        toast.error(errData.detail || "Registration request failed.");
-      }
-    } catch (err) {
-      const msg = "Network uplink offline.";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      const res = await fetch(`https://attendsync-6dn6.onrender.com/api/students/verify-and-create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          code: verificationCode,
-          student_data: formData
-        })
-      });
-      
-      if (res.ok) {
-        toast.success("Entity node registered! Please initiate login.", {
-          style: { background: '#022c22', color: '#34d399', border: '1px solid #059669' }
-        });
-        setShowVerifyModal(false);
         onBackToLogin(); 
       } else {
         const errData = await res.json();
         setError(errData.detail);
-        toast.error(errData.detail || "Verification failed.");
+        toast.error(errData.detail || "Registration failed.");
       }
     } catch (err) {
-      const msg = "Verification process failed.";
+      const msg = "Network uplink offline.";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -112,40 +76,6 @@ export default function StudentRegister({ onBackToLogin }) {
       <div className="absolute inset-0 bg-tech-grid z-0"></div>
       <div className="orb-1"></div>
       <div className="orb-2"></div>
-
-      {showVerifyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="glass-panel w-full max-w-sm p-8 rounded-2xl border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.3)] text-center animate-in zoom-in-95 relative">
-            <div className="absolute -top-12 -right-12 w-24 h-24 bg-cyan-500/20 rounded-full blur-2xl pointer-events-none"></div>
-            
-            <h2 className="text-xl font-black text-cyan-100 uppercase tracking-[0.15em] mb-2 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">Authorize Security Code</h2>
-            <p className="text-[10px] text-cyan-500/70 font-mono tracking-widest uppercase mb-6">
-              Dispatched 6-digit key to <br/>
-              <span className="font-bold text-cyan-300 font-mono">{formData.email}</span>
-            </p>
-            
-            <input 
-              type="text" 
-              maxLength="6"
-              placeholder="000000"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
-              className="w-full text-center tracking-[0.4em] text-3xl font-mono font-black px-4 py-3 rounded-xl bg-slate-900/80 border border-cyan-500/40 text-cyan-300 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none mb-6 shadow-inner transition-all duration-300"
-            />
-            
-            {error && <p className="text-[10px] font-mono uppercase tracking-widest text-rose-400 mb-4">{error}</p>}
-            
-            <button 
-              onClick={handleVerifyCode}
-              disabled={isLoading || verificationCode.length < 6}
-              className="w-full py-3.5 bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-300 border border-cyan-400/50 font-bold text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] disabled:opacity-40 cursor-pointer"
-            >
-              {isLoading ? 'Verifying Code...' : 'Authorize Node Creation'}
-            </button>
-            <button onClick={() => setShowVerifyModal(false)} className="mt-4 text-[10px] font-bold text-slate-500 hover:text-cyan-400 font-mono tracking-widest uppercase transition-colors duration-300">Abort Authorization</button>
-          </div>
-        </div>
-      )}
 
       <div className="glass-panel w-full max-w-4xl rounded-3xl overflow-hidden flex flex-col md:flex-row h-[620px] relative z-10 border-cyan-500/30 shadow-[0_0_40px_rgba(6,182,212,0.15)]">
         
@@ -183,7 +113,7 @@ export default function StudentRegister({ onBackToLogin }) {
 
           <form onSubmit={handleRegisterSubmit} className="space-y-6">
             
-            {error && !showVerifyModal && (
+            {error && (
               <div className="bg-rose-500/10 text-rose-400 text-[10px] font-mono uppercase tracking-widest p-3 rounded-xl border border-rose-500/30 text-center shadow-[0_0_10px_rgba(244,63,94,0.2)]">
                 {error}
               </div>

@@ -62,8 +62,6 @@ def get_db():
     finally:
         db.close()
 
-pending_verifications = {}
-
 # --- PYDANTIC SCHEMAS ---
 class ScanRequest(BaseModel):
     qr_token: str
@@ -92,7 +90,7 @@ class LoginRequest(BaseModel):
     password: str
     role: str
 
-class StudentRegister(BaseModel):
+class DirectStudentRegister(BaseModel):
     student_number: str
     password: str
     email: str
@@ -102,11 +100,6 @@ class StudentRegister(BaseModel):
     birthdate: str
     gender: str
     program: str
-
-class VerifyEmail(BaseModel):
-    email: str
-    code: str
-    student_data: StudentRegister
 
 
 # --- WEBSOCKET MANAGER ---
@@ -233,9 +226,9 @@ async def remove_student(student_number: str, db: Session = Depends(get_db)):
     db.commit()
     return {"msg": "Student removed successfully"}
 
-# 7. Request Verification (Instant On-Screen Code Generation)
-@app.post("/api/students/request-verification")
-async def request_verification(student: StudentRegister, db: Session = Depends(get_db)):
+# 7. Direct Student Registration (No Email Verification Required)
+@app.post("/api/students/register")
+async def register_student_direct(student: DirectStudentRegister, db: Session = Depends(get_db)):
     existing_student = db.query(models.Student).filter(models.Student.student_number == student.student_number).first()
     
     if not existing_student:
@@ -243,37 +236,20 @@ async def request_verification(student: StudentRegister, db: Session = Depends(g
     if existing_student.password:
         raise HTTPException(status_code=400, detail="This Student ID is already registered. Please log in.")
 
-    verification_code = str(random.randint(100000, 999999))
-    pending_verifications[student.email] = verification_code
-
-    return {
-        "msg": "Verification code generated successfully",
-        "debug_code": verification_code
-    }
-
-# 8. Verify Code and Create Account
-@app.post("/api/students/verify-and-create")
-async def verify_and_create(data: VerifyEmail, db: Session = Depends(get_db)):
-    expected_code = pending_verifications.get(data.email)
-    if not expected_code or expected_code != data.code:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
-
-    existing_student = db.query(models.Student).filter(models.Student.student_number == data.student_data.student_number).first()
-    full_name = f"{data.student_data.first_name} {data.student_data.middle_name} {data.student_data.last_name}".replace("  ", " ").strip()
+    full_name = f"{student.first_name} {student.middle_name} {student.last_name}".replace("  ", " ").strip()
     
     existing_student.name = full_name
-    existing_student.password = data.student_data.password
-    existing_student.gender = data.student_data.gender
-    existing_student.birthdate = data.student_data.birthdate
-    existing_student.program = data.student_data.program
+    existing_student.password = student.password
+    existing_student.email = student.email
+    existing_student.gender = student.gender
+    existing_student.birthdate = student.birthdate
+    existing_student.program = student.program
 
     db.commit()
-    if data.email in pending_verifications:
-        del pending_verifications[data.email]
     
     return {"msg": "Account registered successfully!"}
 
-# 9. Process QR Scan (DAILY ATTENDANCE)
+# 8. Process QR Scan (DAILY ATTENDANCE)
 @app.post("/api/scan")
 async def process_scan(scan_data: ScanRequest, db: Session = Depends(get_db)):
     pht_now = datetime.utcnow() + timedelta(hours=8)
@@ -345,7 +321,7 @@ async def process_scan(scan_data: ScanRequest, db: Session = Depends(get_db)):
     
     return {"msg": "Scan successful", "data": live_data}
 
-# 10. Process Overall Compilation Scan
+# 9. Process Overall Compilation Scan
 @app.post("/api/scan/overall")
 async def process_overall_scan(scan_data: OverallScanRequest, db: Session = Depends(get_db)):
     pht_now = datetime.utcnow() + timedelta(hours=8)
@@ -388,7 +364,7 @@ async def process_overall_scan(scan_data: OverallScanRequest, db: Session = Depe
     
     return {"msg": "Compilation saved successfully", "data": live_data}
 
-# 11. Fetch Overall Compilation Grades
+# 10. Fetch Overall Compilation Grades
 @app.get("/api/grades/{section_code}")
 async def get_overall_grades(section_code: str, db: Session = Depends(get_db)):
     grades = db.query(OverallGrade, models.Student).join(
@@ -407,7 +383,7 @@ async def get_overall_grades(section_code: str, db: Session = Depends(get_db)):
         })
     return result
 
-# 12. Export Daily Attendance to CSV (FIXED FOR POSTGRESQL DATE PARSING)
+# 11. Export Daily Attendance to CSV (FIXED FOR POSTGRESQL DATE PARSING)
 @app.get("/api/export/attendance/{section_code}")
 async def export_attendance_csv(section_code: str, date_filter: str, db: Session = Depends(get_db)):
     try:
@@ -439,7 +415,7 @@ async def export_attendance_csv(section_code: str, date_filter: str, db: Session
     response.headers["Content-Disposition"] = f"attachment; filename=Attendance_{section_code}_{date_filter}.csv"
     return response
 
-# 13. Export Overall Gradebook to CSV
+# 12. Export Overall Gradebook to CSV
 @app.get("/api/export/grades/{section_code}")
 async def export_grades_csv(section_code: str, db: Session = Depends(get_db)):
     grades = db.query(OverallGrade, models.Student).join(
@@ -484,7 +460,7 @@ async def export_grades_csv(section_code: str, db: Session = Depends(get_db)):
     response.headers["Content-Disposition"] = f"attachment; filename=Gradebook_{section_code}.csv"
     return response
 
-# 14. Student Portal Dashboard Data
+# 13. Student Portal Dashboard Data
 @app.get("/api/student/dashboard/{student_number}")
 async def get_student_dashboard(student_number: str, db: Session = Depends(get_db)):
     student = db.query(models.Student).filter(models.Student.student_number == student_number).first()
